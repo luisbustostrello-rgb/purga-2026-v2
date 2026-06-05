@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Purga 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#F0F2F5; --surface:#fff; --border:#D1D5DB; --text:#111827;
+  --muted:#6B7280; --accent:#166534; --accent2:#15803D;
+  --accent-light:#DCFCE7; --sidebar:#1E3A2F;
+  --danger:#DC2626; --danger-light:#FEE2E2;
+  --blue:#1D4ED8; --blue-light:#DBEAFE;
+  --gold:#92400E; --gold-light:#FEF3C7;
+  --yellow:#FDE68A; --warn:#FEF9C3;
+  --font:'Inter',sans-serif; --r:6px; --rl:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:var(--sidebar);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.login-box{background:#fff;border-radius:var(--rl);padding:36px 40px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.login-logo{text-align:center;margin-bottom:24px;}
+.login-logo h1{font-size:20px;font-weight:600;color:var(--accent);}
+.login-logo p{font-size:12px;color:var(--muted);margin-top:4px;}
+.lf{margin-bottom:14px;}
+.lf label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:5px;}
+.lf input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);outline:none;}
+.lf input:focus{border-color:var(--accent);}
+.login-btn{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);}
+.login-btn:hover{background:var(--accent2);}
+.login-err{background:var(--danger-light);color:var(--danger);border:1px solid #FCA5A5;border-radius:var(--r);padding:8px 12px;font-size:12px;margin-bottom:12px;display:none;}
+.login-err.show{display:block;}
+
+/* LAYOUT */
+#app{display:none;}
+#app.visible{display:flex;min-height:100vh;}
+.sidebar{width:220px;min-height:100vh;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:100;}
+.sb-logo{padding:20px 16px 15px;border-bottom:1px solid rgba(255,255,255,0.1);}
+.sb-logo h1{color:#fff;font-size:14px;font-weight:600;}
+.sb-logo p{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;}
+.sb-nav{padding:10px 8px;flex:1;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,0.6);font-size:12.5px;transition:all 0.15s;margin-bottom:2px;user-select:none;}
+.nav-item:hover{background:rgba(255,255,255,0.09);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.16);color:#fff;font-weight:500;}
+.sb-bottom{padding:10px 8px 16px;border-top:1px solid rgba(255,255,255,0.1);}
+.db-row{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:11px;color:rgba(255,255,255,0.45);}
+.dot{width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0;}
+.dot.ok{background:#22C55E;}
+.user-row{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:11px;color:rgba(255,255,255,0.55);}
+.role-tag{background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:999px;font-size:10px;color:#fff;}
+.logout-btn{margin-left:auto;cursor:pointer;font-size:10px;color:rgba(255,255,255,0.4);}
+.logout-btn:hover{color:#fff;}
+
+.main{margin-left:220px;flex:1;padding:26px 30px;}
+.module{display:none;}
+.module.active{display:block;}
+
+/* COMPONENTS */
+.page-hdr{margin-bottom:18px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.page-hdr h2{font-size:20px;font-weight:600;}
+.page-hdr p{font-size:12px;color:var(--muted);margin-top:2px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);}
+.card-pad{padding:16px 20px;}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:11px 16px;margin-bottom:14px;}
+.cg{display:flex;align-items:center;gap:7px;}
+.cg label{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap;}
+.cg select,.cg input{padding:6px 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12.5px;font-family:var(--font);background:var(--surface);color:var(--text);outline:none;}
+.cg select:focus,.cg input:focus{border-color:var(--accent);}
+.vd{width:1px;height:26px;background:var(--border);}
+.btn{padding:7px 15px;border-radius:var(--r);font-size:12.5px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);transition:all 0.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+.btn:hover{background:var(--bg);}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-p:hover{background:var(--accent2);}
+.btn-b{background:var(--blue-light);color:var(--blue);border-color:#93C5FD;}
+.btn-b:hover{background:#BFDBFE;}
+.btn-g{background:var(--accent-light);color:var(--accent);border-color:#86EFAC;}
+.btn-g:hover{background:#BBF7D0;}
+.btn-d{background:var(--danger-light);color:var(--danger);border-color:#FCA5A5;}
+.btn-sm{padding:5px 11px;font-size:11.5px;}
+.alert{padding:10px 14px;border-radius:var(--r);font-size:12.5px;margin-bottom:12px;display:none;}
+.alert.show{display:block;}
+.alert-ok{background:var(--accent-light);color:var(--accent);border:1px solid #86EFAC;}
+.alert-err{background:var(--danger-light);color:var(--danger);border:1px solid #FCA5A5;}
+.viewer-note{background:var(--warn);border:1px solid var(--yellow);border-radius:var(--r);padding:8px 14px;font-size:12px;color:var(--gold);margin-bottom:12px;display:none;}
+.viewer-note.show{display:block;}
+
+/* TABLES */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{background:var(--sidebar);color:#fff;padding:9px 10px;text-align:left;font-weight:500;font-size:11px;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.1);}
+thead th:last-child{border-right:none;}
+thead th.tc{text-align:center;}
+thead th.tr{text-align:right;}
+tbody tr{border-bottom:1px solid var(--border);}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:nth-child(even) td{background:#F9FAFB;}
+tbody tr:hover td{background:#F0FDF4!important;}
+td{padding:8px 10px;vertical-align:middle;}
+td.tc{text-align:center;}
+td.tr{text-align:right;font-variant-numeric:tabular-nums;}
+td.muted{color:var(--muted);font-size:11px;}
+.tr-total td{background:#D1FAE5!important;font-weight:600;color:var(--accent);border-top:2px solid #6EE7B7;}
+.tr-total-b td{background:#DBEAFE!important;font-weight:600;color:var(--blue);border-top:2px solid #93C5FD;}
+.tr-total-y td{background:var(--warn)!important;font-weight:700;color:var(--gold);border-top:2px solid var(--yellow);}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:500;}
+.badge-g{background:var(--accent-light);color:var(--accent);}
+.badge-gray{background:var(--bg);color:var(--muted);border:1px solid var(--border);}
+.badge-b{background:var(--blue-light);color:var(--blue);}
+.del-btn{padding:3px 7px;font-size:11px;border-radius:4px;cursor:pointer;border:1px solid #FCA5A5;background:var(--danger-light);color:var(--danger);}
+.del-btn:hover{background:#FECACA;}
+.empty{padding:32px;text-align:center;color:var(--muted);font-size:13px;}
+.loading{display:flex;align-items:center;gap:10px;padding:24px;color:var(--muted);font-size:13px;}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* INGRESO TABLE */
+table.ing-tbl{min-width:1600px;}
+table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5px;}
+.td-fix{background:var(--accent-light)!important;padding:0 10px;border-right:2px solid #A7F3D0;white-space:nowrap;font-weight:600;color:var(--accent);font-size:12px;position:sticky;z-index:2;height:38px;vertical-align:middle;}
+.td-fix0{left:0;min-width:90px;}
+.td-fix1{left:90px;min-width:110px;border-right:2px solid #6EE7B7;}
+.td-cell{padding:2px 3px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+.ci{width:100%;padding:5px;border:1px solid transparent;border-radius:4px;font-size:12px;font-family:var(--font);background:transparent;color:var(--text);text-align:center;outline:none;}
+.ci:hover{border-color:var(--border);background:#fff;}
+.ci:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 2px rgba(22,163,74,0.1);}
+.ci.has-v{background:#F0FFF4;border-color:#BBF7D0;}
+.ci-txt{text-align:left;}
+.ci-sel{width:100%;padding:5px 4px;border:1px solid transparent;border-radius:4px;font-size:11.5px;font-family:var(--font);background:transparent;color:var(--text);outline:none;cursor:pointer;}
+.ci-sel:hover{border-color:var(--border);background:#fff;}
+.ci-sel:focus{border-color:var(--accent);background:#fff;}
+.td-ro{padding:0 8px;height:38px;text-align:center;font-size:12px;white-space:nowrap;border-right:1px solid var(--border);vertical-align:middle;}
+.td-ro.empty-v{color:#D1D5DB;}
+.ing-total td{background:#D1FAE5!important;font-weight:600;color:var(--accent);border-top:2px solid #6EE7B7;text-align:center;font-size:12px;}
+.td-act{padding:3px 6px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
+.historial{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);}
+.hist-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.hist-hdr h3{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+
+/* DASHBOARD */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;}
+.kpi-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.kpi-val{font-size:24px;font-weight:600;line-height:1;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.kpi.green .kpi-val{color:var(--accent);}
+.kpi.blue .kpi-val{color:var(--blue);}
+.kpi.gold .kpi-val{color:var(--gold);}
+.kpi.red .kpi-val{color:var(--danger);}
+.kpi.purple .kpi-val{color:#7C3AED;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+.dash-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;}
+.dash-box-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;}
+.bar-wrap{display:flex;align-items:flex-end;gap:6px;height:130px;padding-top:8px;}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:28px;}
+.br{width:100%;border-radius:3px 3px 0 0;transition:all .3s;cursor:pointer;}
+.br:hover{filter:brightness(1.1);}
+.bv{font-size:8px;color:var(--muted);font-weight:500;text-align:center;white-space:nowrap;}
+.bl{font-size:8.5px;color:var(--muted);}
+.hbar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.hbar-lbl{font-size:11px;min-width:90px;text-align:right;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hbar-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden;}
+.hbar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:7px;transition:width .4s;}
+.hbar-fill span{font-size:11px;color:#fff;font-weight:500;white-space:nowrap;}
+.hbar-val{font-size:11px;color:var(--muted);min-width:85px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* SECTIONS */
+.section{margin-bottom:24px;}
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.sec-title{font-size:13.5px;font-weight:600;color:var(--text);}
+.sec-sub{font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:var(--rl);width:560px;max-width:95vw;max-height:90vh;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.2);display:flex;flex-direction:column;}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--sidebar);}
+.modal-hdr h3{font-size:14px;font-weight:600;color:#fff;}
+.modal-close{background:none;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.modal-close:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.modal-body{padding:20px;overflow-y:auto;flex:1;}
+.modal-ftr{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:var(--bg);}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mf{display:flex;flex-direction:column;gap:5px;}
+.mf label{font-size:11.5px;font-weight:500;color:var(--muted);}
+.mf input,.mf select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);outline:none;}
+.mf input:focus,.mf select:focus{border-color:var(--accent);}
+.modal-info{background:var(--accent-light);border:1px solid #86EFAC;border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--accent);}
+
+/* RESUMEN / ANALISIS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px;}
+.crd{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;}
+.crd-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.crd-val{font-size:22px;font-weight:600;line-height:1;}
+.crd-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.crd.green .crd-val{color:var(--accent);}
+.crd.blue .crd-val{color:var(--blue);}
+.crd.gold .crd-val{color:var(--gold);}
+.crd.purple .crd-val{color:#7C3AED;}
+.th-grp-g{background:#1E3A2F;}
+.th-grp-b{background:#1e3352;}
+.th-ing{background:#1E3A2F;}
+.th-cost{background:#1e3352;}
+.mom-p{color:#15803D;font-weight:600;}
+.mom-n{color:var(--danger);font-weight:600;}
+.mom-z{color:var(--muted);}
+
+/* DATA MODULE */
+.search-box{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;background:var(--bg);flex:1;max-width:260px;}
+.search-box input{border:none;background:transparent;outline:none;font-size:12.5px;font-family:var(--font);color:var(--text);width:100%;}
+.ei{width:100%;padding:5px 8px;border:1px solid #93C5FD;border-radius:4px;font-size:13px;font-family:var(--font);background:#fff;color:var(--text);outline:none;}
+.ei.right{text-align:right;}
+.ei-sel{width:100%;padding:5px 8px;border:1px solid #93C5FD;border-radius:4px;font-size:13px;font-family:var(--font);background:#fff;color:var(--text);outline:none;cursor:pointer;}
+.sku-tag{display:inline-block;padding:2px 9px;border-radius:999px;background:var(--bg);color:var(--muted);font-size:11.5px;font-weight:500;border:1px solid var(--border);}
+.um-tag{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:500;}
+.price-c{font-weight:500;color:var(--accent);}
+
+/* PANELES / ANALISIS TABLES */
+.t1 thead tr.t1-title th{background:#2D6A4F;color:#fff;padding:8px 12px;font-size:12px;font-weight:600;text-align:center;letter-spacing:.04em;}
+.t1 thead tr.t1-cols th{background:#1E3A2F;color:#fff;padding:8px 6px;font-size:10.5px;font-weight:500;white-space:nowrap;text-align:center;border-right:1px solid rgba(255,255,255,0.1);}
+.t1 thead tr.t1-cols th.left{text-align:left;}
+.t1 .total-row td{background:var(--warn)!important;font-weight:700;color:var(--gold);border-top:2px solid var(--yellow);}
+.t2 thead tr.t2-title th{background:#1e3352;color:#fff;padding:8px 12px;font-size:12px;font-weight:600;text-align:center;letter-spacing:.04em;}
+.t2 thead tr.t2-cols th{background:#1a2d4a;color:#fff;padding:8px 6px;font-size:10.5px;font-weight:500;white-space:nowrap;text-align:center;border-right:1px solid rgba(255,255,255,0.1);}
+.t2 thead tr.t2-cols th.left{text-align:left;}
+.t2 .total-row td{background:#DBEAFE!important;font-weight:700;color:var(--blue);border-top:2px solid #93C5FD;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>🌿 Sistema Purga</h1>
+      <p>LB Logística · 2026</p>
+    </div>
+    <div class="login-err" id="login-err">Usuario o contraseña incorrectos</div>
+    <div class="lf"><label>Usuario</label>
+      <input type="text" id="l-user" placeholder="Ingresa tu usuario" autocomplete="username"/>
+    </div>
+    <div class="lf"><label>Contraseña</label>
+      <input type="password" id="l-pass" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" id="login-btn">Ingresar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sb-logo"><h1>Sistema Purga</h1><p>LB Logística · 2026</p></div>
+    <nav class="sb-nav">
+      <div class="nav-item active" data-mod="dash">◈ Dashboard</div>
+      <div class="nav-item" data-mod="ingreso">⊞ Ingreso Purga</div>
+      <div class="nav-item" data-mod="resumen">≡ Resumen Purga</div>
+      <div class="nav-item" data-mod="analisis">📊 Análisis Purga</div>
+      <div class="nav-item" data-mod="paneles">◧ Paneles Malos</div>
+      <div class="nav-item" data-mod="data">▤ Data</div>
+    </nav>
+    <div class="sb-bottom">
+      <div class="db-row"><div class="dot" id="db-dot"></div><span id="db-txt">Conectando...</span></div>
+      <div class="user-row" id="user-row">
+        <span id="u-name">—</span>
+        <span class="role-tag" id="u-role">—</span>
+        <span class="logout-btn" id="logout-btn">Salir</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="mod-dash" class="module active">
+      <div class="page-hdr">
+        <div><h2>Dashboard</h2><p>Resumen general · 2026</p></div>
+        <button class="btn btn-p btn-sm" onclick="loadDash()">↻ Actualizar</button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi green"><div class="kpi-lbl">Total Kg Purga YTD</div><div class="kpi-val" id="d-kg">—</div><div class="kpi-sub">kg acumulados</div></div>
+        <div class="kpi blue"><div class="kpi-lbl">Costo MP Total</div><div class="kpi-val" id="d-cmp">—</div><div class="kpi-sub">materia prima</div></div>
+        <div class="kpi gold"><div class="kpi-lbl">Costo Total Paneles</div><div class="kpi-val" id="d-cpan">—</div><div class="kpi-sub">paneles malos</div></div>
+        <div class="kpi purple"><div class="kpi-lbl">Registros</div><div class="kpi-val" id="d-reg">—</div><div class="kpi-sub">ingresos totales</div></div>
+        <div class="kpi red"><div class="kpi-lbl">Total Paneles Malos</div><div class="kpi-val" id="d-pan">—</div><div class="kpi-sub">unidades</div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-box"><div class="dash-box-title">📊 Purga KG por mes</div><div class="bar-wrap" id="d-bar-kg"></div></div>
+        <div class="dash-box"><div class="dash-box-title">💰 Costo MP por mes</div><div class="bar-wrap" id="d-bar-c"></div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-box"><div class="dash-box-title">🏷 Purga por Material</div><div id="d-mat"></div></div>
+        <div class="dash-box"><div class="dash-box-title">⚙ Purga por Máquina</div><div id="d-maq"></div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-box"><div class="dash-box-title">🏢 Purga por Cuenta</div><div id="d-cta"></div></div>
+        <div class="dash-box"><div class="dash-box-title">⚠ Paneles Malos por Material</div><div id="d-pan-mat"></div></div>
+      </div>
+    </div>
+
+    <!-- INGRESO -->
+    <div id="mod-ingreso" class="module">
+      <div class="page-hdr"><div><h2>Ingreso de Purga</h2><p>Cuenta y máquina son fijas</p></div></div>
+      <div class="viewer-note" id="vn-ing">👁 Modo visualización — no puedes modificar datos</div>
+      <div class="alert" id="al-ing"></div>
+      <div class="toolbar">
+        <div class="cg"><label>Mes</label>
+          <select id="ing-mes">
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="cg"><label>Fecha</label><input type="date" id="ing-fecha" style="width:140px" onchange="applyDateAll()"/></div>
+        <button class="btn btn-sm" style="background:var(--warn);border-color:var(--yellow);color:var(--gold)" onclick="applyDateAll()">📅 Aplicar a todas</button>
+        <div class="vd"></div>
+        <button class="btn btn-p" id="btn-guardar-todo" onclick="guardarTodo()">💾 Guardar todo</button>
+        <button class="btn btn-g btn-sm" id="btn-importar" onclick="document.getElementById('ing-xl').click()">⬆ Carga masiva Excel</button>
+        <input type="file" id="ing-xl" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarExcel(this)"/>
+        <button class="btn btn-sm" id="btn-limpiar" onclick="limpiarIngreso()">↺ Limpiar</button>
+        <span id="ing-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="card tbl-wrap">
+        <table class="ing-tbl">
+          <thead><tr>
+            <th class="th-fix0 td-fix0" style="background:var(--sidebar);position:sticky;left:0;z-index:3">CUENTA</th>
+            <th class="th-fix1 td-fix1" style="background:var(--sidebar);position:sticky;left:90px;z-index:3">MÁQUINA</th>
+            <th class="tc">Fecha</th><th class="tc">Kilos Purga</th><th class="tc">Purga color</th>
+            <th class="tc">Pan sin frame</th><th class="tc">Kg pan s/frame</th><th class="tc">Pan Malos</th>
+            <th class="tc">Kg Panel</th><th class="tc">Medida</th><th class="tc">Altura</th>
+            <th class="tc">Slot</th><th class="tc">Descri</th><th class="tc">OF</th>
+            <th class="tc">Marcos</th><th class="tc">Peso real</th><th class="tc">MP SKU</th>
+            <th style="min-width:160px;text-align:left">MP Descripción</th>
+            <th class="tc" style="min-width:100px">Acciones</th>
+          </tr></thead>
+          <tbody id="ing-body"></tbody>
+        </table>
+      </div>
+      <div class="historial">
+        <div class="hist-hdr"><h3>Últimos registros</h3><button class="btn btn-sm" onclick="loadRecientes()">↻</button></div>
+        <div class="tbl-wrap" id="ing-hist"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div id="mod-resumen" class="module">
+      <div class="page-hdr"><div><h2>Resumen de Purga</h2><p>Costos calculados automáticamente desde Data</p></div></div>
+      <div class="toolbar">
+        <div class="cg"><label>Mes</label>
+          <select id="r-mes" onchange="loadResumen()">
+            <option value="">Todos</option>
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="cg"><label>Cuenta</label>
+          <select id="r-cta" onchange="loadResumen()"><option value="">Todas</option><option>IMPU</option><option>IMPU PIN</option><option>HCPU</option><option>IMR</option><option>CMR</option></select>
+        </div>
+        <div class="cg"><label>Máquina</label>
+          <select id="r-maq" onchange="loadResumen()"><option value="">Todas</option><option>LG</option><option>HAITIAN</option><option>HCPU</option><option>DESMA NEGRA</option><option>DESMA GRIS</option><option>PRENSA 1</option><option>PRENSA 2</option><option>PRENSA 3</option><option>PRENSA 4</option></select>
+        </div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" onclick="loadResumen()">↻</button>
+        <button class="btn btn-g btn-sm" onclick="exportResCSV()">⬇ Excel</button>
+      </div>
+      <div class="cards">
+        <div class="crd green"><div class="crd-lbl">Total Kg Purga</div><div class="crd-val" id="rc-kg">—</div></div>
+        <div class="crd blue"><div class="crd-lbl">Costo MP Total</div><div class="crd-val" id="rc-mp">—</div></div>
+        <div class="crd gold"><div class="crd-lbl">Costo Total Paneles</div><div class="crd-val" id="rc-pan">—</div></div>
+        <div class="crd purple"><div class="crd-lbl">Registros</div><div class="crd-val" id="rc-reg">—</div></div>
+      </div>
+      <div class="card tbl-wrap">
+        <table id="res-tbl">
+          <thead>
+            <tr><th colspan="16" class="th-grp-g tc" style="color:#fff;padding:7px">📋 DATOS DE INGRESO</th><th colspan="4" class="th-grp-b tc" style="color:#fff;padding:7px">💰 COSTOS (desde Data)</th></tr>
+            <tr>
+              <th class="th-ing" style="text-align:left;min-width:75px">Cuenta</th>
+              <th class="th-ing" style="text-align:left;min-width:90px">Máquina</th>
+              <th class="th-ing tc" style="min-width:82px">Fecha</th>
+              <th class="th-ing tc">Mes</th>
+              <th class="th-ing tr" style="min-width:58px">Kg</th>
+              <th class="th-ing tr" style="min-width:55px">P.Color</th>
+              <th class="th-ing tr" style="min-width:55px">P.s/f</th>
+              <th class="th-ing tr" style="min-width:58px">Kg p.s/f</th>
+              <th class="th-ing tr" style="min-width:55px">P.Malos</th>
+              <th class="th-ing tr" style="min-width:55px">Kg Pan</th>
+              <th class="th-ing tc" style="min-width:58px">Medida</th>
+              <th class="th-ing tc" style="min-width:48px">Altura</th>
+              <th class="th-ing tc" style="min-width:45px">Slot</th>
+              <th class="th-ing tc" style="min-width:45px">OF</th>
+              <th class="th-ing tc" style="min-width:68px">MP SKU</th>
+              <th class="th-ing" style="text-align:left;min-width:140px">MP Descripción</th>
+              <th class="th-cost tr" style="min-width:90px">COSTO MP KG</th>
+              <th class="th-cost tr" style="min-width:100px">COSTO MP TOTAL</th>
+              <th class="th-cost tr" style="min-width:90px">COSTO PANEL</th>
+              <th class="th-cost tr" style="min-width:110px">COSTO TOTAL PANEL</th>
+              <th class="th-cost tc" style="min-width:70px">ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody id="res-body"><tr><td colspan="21"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANALISIS -->
+    <div id="mod-analisis" class="module">
+      <div class="page-hdr"><div><h2>Análisis de Purga 2026</h2><p>Tablas por SKU, cuenta y máquina</p></div></div>
+      <div class="toolbar">
+        <div class="cg"><label>Año</label><select id="an-anio" onchange="loadAnalisis()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" onclick="loadAnalisis()">↻</button>
+        <button class="btn btn-g btn-sm" onclick="exportAnTodo()">⬇ Todo en Excel</button>
+      </div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">📋 Purga 2026<span class="sec-sub">kg por SKU y mes</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t1')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="an-t1"><thead><tr class="t1-title"><th colspan="16">PURGA 2026</th></tr><tr class="t1-cols" id="an-t1-cols"></tr></thead><tbody id="an-t1-body"><tr><td colspan="16"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Purga $$$<span class="sec-sub">costo MP por SKU y mes</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t2')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="an-t2"><thead><tr class="t2-title"><th colspan="15">COSTO PURGA $$$</th></tr><tr class="t2-cols" id="an-t2-cols"></tr></thead><tbody id="an-t2-body"><tr><td colspan="15"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">🏢 Purga por Cuenta<span class="sec-sub">kg</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t3')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="an-t3"><thead><tr class="t1-title" style="background:#0F766E"><th colspan="15">PURGA POR CUENTA</th></tr><tr class="t1-cols" style="background:#0D5F59" id="an-t3-cols"></tr></thead><tbody id="an-t3-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Purga por Cuenta $$$$<span class="sec-sub">costo</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t4')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="an-t4"><thead><tr class="t2-title"><th colspan="15">PURGA POR CUENTA $$$$</th></tr><tr class="t2-cols" id="an-t4-cols"></tr></thead><tbody id="an-t4-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">⚙ Purga por Máquina<span class="sec-sub">kg</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t5')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="an-t5"><thead><tr class="t1-title" style="background:#374151"><th colspan="15">PURGA POR MÁQUINA</th></tr><tr class="t1-cols" style="background:#1F2937" id="an-t5-cols"></tr></thead><tbody id="an-t5-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Purga por Máquina $$$<span class="sec-sub">costo</span></div><button class="btn btn-g btn-sm" onclick="exportAnSheet('t6')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="an-t6"><thead><tr class="t2-title" style="background:#374151"><th colspan="15">PURGA POR MÁQUINA $$$</th></tr><tr class="t2-cols" style="background:#1F2937" id="an-t6-cols"></tr></thead><tbody id="an-t6-body"></tbody></table></div></div>
+    </div>
+
+    <!-- PANELES -->
+    <div id="mod-paneles" class="module">
+      <div class="page-hdr"><div><h2>Paneles Malos 2026</h2><p>Desde Ingreso de Purga</p></div></div>
+      <div class="toolbar">
+        <div class="cg"><label>Año</label><select id="pan-anio" onchange="loadPaneles()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" onclick="loadPaneles()">↻</button>
+        <button class="btn btn-g btn-sm" onclick="exportPanTodo()">⬇ Todo en Excel</button>
+      </div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">📋 Paneles Malos<span class="sec-sub">cantidad por SKU y mes</span></div><button class="btn btn-g btn-sm" onclick="exportPanT1()">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="pan-t1"><thead><tr class="t1-title"><th colspan="15">PANELES MALOS 2026</th></tr><tr class="t1-cols"><th class="left" style="min-width:68px">SKU</th><th class="left" style="min-width:175px">DESCRIPCION</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th style="background:#2D6A4F">TOTAL</th></tr></thead><tbody id="pan-t1-body"><tr><td colspan="15"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Paneles<span class="sec-sub">paneles malos × costo unitario</span></div><button class="btn btn-g btn-sm" onclick="exportPanT2()">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="pan-t2"><thead><tr class="t2-title"><th colspan="15">COSTO PANELES</th></tr><tr class="t2-cols"><th class="left" style="min-width:175px">DESCRIPCION</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th style="background:#2a3f6a">TOTAL</th><th style="background:#374151;min-width:58px">MOM%</th></tr></thead><tbody id="pan-t2-body"><tr><td colspan="15"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+    </div>
+
+    <!-- DATA -->
+    <div id="mod-data" class="module">
+      <div class="page-hdr"><div><h2>Data — Materiales y Costos</h2><p>Tabla maestra de SKUs</p></div></div>
+      <div class="viewer-note" id="vn-data">👁 Modo visualización — no puedes modificar datos</div>
+      <div class="alert" id="al-data"></div>
+      <div class="toolbar">
+        <div class="search-box"><span>🔍</span><input type="text" id="d-search" placeholder="Buscar SKU..." oninput="filterData()"/></div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" id="btn-nuevo-mat" onclick="nuevoMat()">＋ Nuevo</button>
+        <button class="btn btn-b btn-sm" id="btn-imp-mat" onclick="document.getElementById('mat-xl').click()">⬆ Importar Excel</button>
+        <input type="file" id="mat-xl" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarMat(this)"/>
+        <button class="btn btn-sm" onclick="exportDataCSV()">⬇ CSV</button>
+        <div class="vd"></div>
+        <span id="d-count" style="font-size:12px;color:var(--muted)">— items</span>
+      </div>
+      <div class="card tbl-wrap">
+        <table><thead><tr>
+          <th style="width:100px">SKU</th><th>Descripción</th>
+          <th style="width:150px;text-align:right">Precio Unitario</th>
+          <th style="width:120px">UN Medida</th>
+          <th style="width:155px;text-align:right">Costo UN Paneles</th>
+          <th style="width:110px;text-align:center">Acciones</th>
+        </tr></thead>
+        <tbody id="d-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL EDITAR RESUMEN -->
+<div class="modal-bg" id="modal-res">
+  <div class="modal">
+    <div class="modal-hdr"><h3>✏ Editar registro</h3><button class="modal-close" id="modal-close-btn">✕</button></div>
+    <div class="modal-body">
+      <div class="modal-info" id="modal-info">—</div>
+      <div class="modal-grid">
+        <div class="mf"><label>Kg Purga</label><input type="number" id="me-kg" step="0.1" min="0"/></div>
+        <div class="mf"><label>Purga Color</label><input type="number" id="me-color" step="0.1" min="0"/></div>
+        <div class="mf"><label>Pan sin frame</label><input type="number" id="me-psf" step="0.1" min="0"/></div>
+        <div class="mf"><label>Kg pan s/frame</label><input type="number" id="me-kgsf" step="0.1" min="0"/></div>
+        <div class="mf"><label>Pan Malos</label><input type="number" id="me-pmlos" step="0.1" min="0"/></div>
+        <div class="mf"><label>Kg Panel</label><input type="number" id="me-kgpan" step="0.1" min="0"/></div>
+        <div class="mf"><label>Medida</label><input type="text" id="me-medida"/></div>
+        <div class="mf"><label>Altura</label>
+          <select id="me-altura"><option value="">—</option><option>30</option><option>36</option><option>40</option><option>45</option><option>50</option><option>60</option><option>65</option><option>70</option><option>75</option><option>80</option></select>
+        </div>
+        <div class="mf"><label>Slot</label><input type="text" id="me-slot"/></div>
+        <div class="mf"><label>OF</label><input type="text" id="me-of"/></div>
+        <div class="mf"><label>Marcos</label><input type="number" id="me-marcos" step="1" min="0"/></div>
+        <div class="mf"><label>Peso real</label><input type="number" id="me-peso" step="0.01" min="0"/></div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-sm" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-p btn-sm" id="modal-save-btn">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIGURACIÓN — cambia estas credenciales
+// ════════════════════════════════════════════════════════
+const CFG = {
+  url: 'https://ggjbbxtzielyexxhxivo.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnamJieHR6aWVseWV4eGh4aXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTc0NzQsImV4cCI6MjA5NjE5MzQ3NH0.4nFWFTZrmA0fGAT6HBMoM7ctiQrEntCnptDc843uMUU'
+};
+
+const USERS = {
+  admin:      { pass: 'purga2026', role: 'admin',  name: 'Administrador' },
+  visualizar: { pass: 'ver2026',   role: 'viewer', name: 'Visualizador'  }
+};
+
+// ════════════════════════════════════════════════════════
+// CONSTANTES
+// ════════════════════════════════════════════════════════
+const ML  = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const MSL = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const SKU_ORDER  = ['10027','10044','10046','10050','10053','10055','10060','10061','10070','10084','10001','19990'];
+const CUENTAS    = ['IMPU PANEL','IMPU PIN','CMR','IMR','HCPU'];
+const MAQUINAS   = ['LG','HAITIAN','STUBBE','HCPU','DESMA NEGRA','DESMA GRIS','PRENSA 1','PRENSA 2','PRENSA 3','PRENSA 4'];
+const ALTURAS    = [30,36,40,45,50,60,65,70,75,80];
+const UM_OPTIONS = ['KG','UN','MT','LT','GR','N/A'];
+const FILAS_ING  = [
+  {cuenta:'IMPU',     maquina:'LG'},
+  {cuenta:'IMPU PIN', maquina:'HAITIAN'},
+  {cuenta:'HCPU',     maquina:'HCPU'},
+  {cuenta:'IMR',      maquina:'DESMA NEGRA'},
+  {cuenta:'IMR',      maquina:'DESMA GRIS'},
+  {cuenta:'CMR',      maquina:'PRENSA 1'},
+  {cuenta:'CMR',      maquina:'PRENSA 2'},
+  {cuenta:'CMR',      maquina:'PRENSA 3'},
+  {cuenta:'CMR',      maquina:'PRENSA 4'},
+];
+const DESC_FIJA = {
+  '10027':'PU-ERA-E83A-20Kg','10044':'GOM-MEZ-Gris (YMN001)/Kg',
+  '10046':'GOM-RUB-NR65E68-Iny/Kg','10050':'GOM-RUB-NR6568-Pren/Kg',
+  '10053':'TPU-WAN-WHT-1185EC/25Kg','10055':'TPU-WAN-WHT-1195EC/25Kg',
+  '10060':'GOM-RUB-M1RN6107TD/KG','10061':'TPU-WAN-WHT-1160D/KG',
+  '10070':'GOM-RUB-NR45/Kg','10084':'TPU--ES-IJ 85/Kg',
+  '10001':'TPU-COI-Laripur 8025/25Kg','19990':'NO REGISTRA MATERIAL'
+};
+const PAL = ['#10B981','#3B82F6','#F59E0B','#EF4444','#8B5CF6','#EC4899','#14B8A6','#F97316','#06B6D4','#84CC16','#6366F1','#059669'];
+
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let sb = null;
+let currentUser = null;
+let maestro = {};
+let rowState = FILAS_ING.map(() => ({mode:'input', dbId:null}));
+let allDataItems = [];
+let allResumen = [];
+let anStore = {};
+let panT1 = {}, panT2 = {};
+let editResId = null;
+let dataEditSku = null;
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+function fmtN(v){ const n=parseFloat(v)||0; return n%1===0?n.toFixed(0):n.toFixed(1); }
+function fmtM(v){ return (parseFloat(v)||0).toLocaleString('es-CL',{minimumFractionDigits:3,maximumFractionDigits:3}); }
+function fmtM0(v){ return (parseFloat(v)||0).toLocaleString('es-CL',{maximumFractionDigits:0}); }
+function $v(v){ return (parseFloat(v)||0)>0?'$'+fmtM(v):'—'; }
+function nv(v){ return (parseFloat(v)||0)>0?fmtN(v):'—'; }
+function sv(v){ return v||'—'; }
+function gDesc(sku){ return (maestro[sku]||{}).descripcion||DESC_FIJA[sku]||sku; }
+function gPrecio(sku){ return parseFloat((maestro[sku]||{}).precio_unitario)||0; }
+function gCPan(sku){ return parseFloat((maestro[sku]||{}).costo_un_paneles)||0; }
+function isAdmin(){ return currentUser&&currentUser.role==='admin'; }
+function calcMOM(vals){
+  const wd=vals.filter(v=>v>0);
+  if(wd.length<2) return null;
+  const last=wd[wd.length-1], prev=wd[wd.length-2];
+  return prev===0?null:Math.round(((last-prev)/prev)*100);
+}
+function momHtml(vals){
+  const m=calcMOM(vals);
+  if(m===null) return '<span class="mom-z">0%</span>';
+  return '<span class="'+(m>0?'mom-p':m<0?'mom-n':'mom-z')+'">'+(m>0?'+':'')+m+'%</span>';
+}
+function showAlert(id,msg,type){
+  const el=document.getElementById('al-'+id);
+  if(!el) return;
+  el.textContent=msg; el.className='alert show alert-'+(type==='ok'?'ok':'err');
+  setTimeout(()=>el.classList.remove('show'),5000);
+}
+function emptyRow(cols){ return '<tr><td colspan="'+cols+'" class="empty">Sin datos</td></tr>'; }
+
+// ════════════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════════════
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('l-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+document.getElementById('l-user').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+function doLogin(){
+  const user = document.getElementById('l-user').value.trim().toLowerCase();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('login-err');
+  if(USERS[user] && USERS[user].pass===pass){
+    currentUser = {...USERS[user], username:user};
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('u-name').textContent = currentUser.name;
+    document.getElementById('u-role').textContent = isAdmin()?'Admin':'Solo lectura';
+    errEl.classList.remove('show');
+    applyRole();
+    initApp();
+  } else {
+    errEl.classList.add('show');
+    document.getElementById('l-pass').value='';
+  }
+}
+
+document.getElementById('logout-btn').addEventListener('click', function(){
+  currentUser=null; sb=null;
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('db-dot').className='dot';
+  document.getElementById('db-txt').textContent='Conectando...';
+});
+
+function applyRole(){
+  if(!isAdmin()){
+    document.getElementById('vn-ing').classList.add('show');
+    document.getElementById('vn-data').classList.add('show');
+    ['btn-guardar-todo','btn-importar','btn-limpiar','btn-nuevo-mat','btn-imp-mat'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.display='none';
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// INIT APP
+// ════════════════════════════════════════════════════════
+async function initApp(){
+  try {
+    sb = supabase.createClient(CFG.url, CFG.key);
+    document.getElementById('db-dot').className='dot ok';
+    document.getElementById('db-txt').textContent='Conectado';
+    await loadMaestro();
+    buildIngresoTable();
+    loadDash();
+    loadData();
+  } catch(e){
+    document.getElementById('db-dot').className='dot';
+    document.getElementById('db-txt').textContent='Error conexión';
+    console.error(e);
+  }
+}
+
+async function loadMaestro(){
+  const {data}=await sb.from('maestro_sku').select('*');
+  maestro={};
+  (data||[]).forEach(r=>maestro[r.sku]=r);
+}
+
+// ════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', function(){
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+    this.classList.add('active');
+    const mod = this.dataset.mod;
+    document.getElementById('mod-'+mod).classList.add('active');
+    if(mod==='dash')     loadDash();
+    if(mod==='resumen')  loadResumen();
+    if(mod==='analisis') loadAnalisis();
+    if(mod==='paneles')  loadPaneles();
+    if(mod==='data')     loadData();
+    if(mod==='ingreso')  loadRecientes();
+  });
+});
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════
+async function loadDash(){
+  if(!sb) return;
+  await loadMaestro();
+  const {data}=await sb.from('purgas').select('*').eq('tipo_panel','PURGA').eq('anio',2026);
+  const rows=data||[];
+  let sumKg=0,sumMP=0,sumPan=0,sumPM=0;
+  const kgM=Array(12).fill(0),cM=Array(12).fill(0);
+  const byMat={},byMaq={},byCta={},byPan={};
+  rows.forEach(r=>{
+    const sku=r.mp_sku||r.sku||'19990', mes=parseInt(r.mes)-1;
+    const kg=parseFloat(r.kg)||0;
+    const kgB=kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+    const costo=kgB*gPrecio(sku);
+    const pm=parseFloat(r.paneles_malos)||0;
+    const cp=pm*gCPan(sku);
+    sumKg+=kg; sumMP+=costo; sumPan+=cp; sumPM+=pm;
+    if(mes>=0&&mes<12){kgM[mes]+=kg; cM[mes]+=costo;}
+    if(!byMat[sku]) byMat[sku]={kg:0,c:0}; byMat[sku].kg+=kg; byMat[sku].c+=costo;
+    const maq=r.maquina||'—';
+    if(!byMaq[maq]) byMaq[maq]={kg:0,c:0}; byMaq[maq].kg+=kg; byMaq[maq].c+=costo;
+    const cta=r.cuenta||'—';
+    if(!byCta[cta]) byCta[cta]={kg:0,c:0}; byCta[cta].kg+=kg; byCta[cta].c+=costo;
+    if(!byPan[sku]) byPan[sku]={pm:0,c:0}; byPan[sku].pm+=pm; byPan[sku].c+=cp;
+  });
+  document.getElementById('d-kg').textContent  = sumKg>0?fmtN(sumKg)+' kg':'—';
+  document.getElementById('d-cmp').textContent = sumMP>0?'$'+fmtM0(sumMP):'—';
+  document.getElementById('d-cpan').textContent= sumPan>0?'$'+fmtM0(sumPan):'—';
+  document.getElementById('d-reg').textContent = rows.length;
+  document.getElementById('d-pan').textContent = sumPM>0?fmtN(sumPM)+' un':'—';
+  const maxKg=Math.max(...kgM,1), maxC=Math.max(...cM,1);
+  const KC=['#10B981','#059669','#047857','#34D399','#6EE7B7','#065F46','#0D9488','#0F766E','#14B8A6','#0891B2','#0284C7','#0369A1'];
+  const CC=['#3B82F6','#2563EB','#1D4ED8','#60A5FA','#93C5FD','#1E40AF','#1E3A8A','#3B82F6','#60A5FA','#93C5FD','#BFDBFE','#2563EB'];
+  document.getElementById('d-bar-kg').innerHTML=kgM.map((v,i)=>
+    '<div class="bc"><div class="bv">'+( v>0?fmtN(v):'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxKg*120),v>0?4:0)+'px;background:'+KC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
+  document.getElementById('d-bar-c').innerHTML=cM.map((v,i)=>
+    '<div class="bc"><div class="bv">'+( v>0?'$'+fmtM0(v/1000)+'k':'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxC*120),v>0?4:0)+'px;background:'+CC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
+  const matRows=Object.entries(byMat).sort((a,b)=>b[1].kg-a[1].kg);
+  const maxMKg=matRows.length?matRows[0][1].kg:1;
+  document.getElementById('d-mat').innerHTML=matRows.map(([sku,v],i)=>
+    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,16)+'…</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMKg*100)+'%;background:'+PAL[i%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM0(v.c)+'</div></div>').join('');
+  const maqRows=Object.entries(byMaq).sort((a,b)=>b[1].kg-a[1].kg);
+  const maxMqKg=maqRows.length?maqRows[0][1].kg:1;
+  document.getElementById('d-maq').innerHTML=maqRows.map(([m,v],i)=>
+    '<div class="hbar-row"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM0(v.c)+'</div></div>').join('');
+  const ctaRows=Object.entries(byCta).sort((a,b)=>b[1].kg-a[1].kg);
+  const maxCtaKg=ctaRows.length?ctaRows[0][1].kg:1;
+  document.getElementById('d-cta').innerHTML=ctaRows.map(([c,v],i)=>
+    '<div class="hbar-row"><div class="hbar-lbl">'+c+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxCtaKg*100)+'%;background:'+PAL[(i+2)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM0(v.c)+'</div></div>').join('');
+  const panRows=Object.entries(byPan).filter(([,v])=>v.pm>0).sort((a,b)=>b[1].pm-a[1].pm);
+  const maxPM=panRows.length?panRows[0][1].pm:1;
+  document.getElementById('d-pan-mat').innerHTML=panRows.length?panRows.map(([sku,v])=>
+    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,16)+'…</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.pm/maxPM*100)+'%;background:#EF4444"><span>'+fmtN(v.pm)+' un</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+fmtM0(v.c)+'</div></div>').join('')
+    :'<div class="empty">Sin paneles malos</div>';
+}
+
+// ════════════════════════════════════════════════════════
+// INGRESO
+// ════════════════════════════════════════════════════════
+function buildIngresoTable(){
+  const skuOpts='<option value="">—</option>'+SKU_ORDER.map(k=>'<option value="'+k+'">'+k+'</option>').join('');
+  const altOpts='<option value="">—</option>'+ALTURAS.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+  let html='';
+  FILAS_ING.forEach((f,i)=>{
+    html+='<tr data-row="'+i+'">'
+      +'<td class="td-fix td-fix0">'+f.cuenta+'</td>'
+      +'<td class="td-fix td-fix1">'+f.maquina+'</td>'
+      +ic(i,'fecha','date',70)+ic(i,'kg','number',62)+ic(i,'color','number',62)
+      +ic(i,'psf','number',62)+ic(i,'kgsf','number',65)+ic(i,'pmlos','number',62)
+      +ic(i,'kgpan','number',62)+ic(i,'medida','text',68)
+      +'<td class="td-cell"><select class="ci-sel" id="r'+i+'-altura" style="min-width:68px">'+altOpts+'</select></td>'
+      +ic(i,'slot','text',55)+ic(i,'descri','text',75)+ic(i,'of','text',55)
+      +ic(i,'marcos','number',55)+ic(i,'peso','number',62)
+      +'<td class="td-cell"><select class="ci-sel" id="r'+i+'-sku" onchange="onSku('+i+')" style="min-width:80px">'+skuOpts+'</select></td>'
+      +'<td class="td-cell" id="r'+i+'-mpdesc" style="padding:0 8px;font-size:11px;color:var(--muted);min-width:160px;vertical-align:middle;white-space:nowrap">—</td>'
+      +'<td class="td-act"><button class="btn btn-g btn-sm" onclick="guardarFila('+i+')">💾</button></td>'
+      +'</tr>';
+  });
+  html+='<tr class="ing-total"><td class="td-fix td-fix0" style="font-size:11px">TOTAL</td><td class="td-fix td-fix1"></td><td></td>'
+    +'<td id="tot-kg"></td><td id="tot-color"></td><td id="tot-psf"></td>'
+    +'<td id="tot-kgsf"></td><td id="tot-pmlos"></td><td id="tot-kgpan"></td>'
+    +'<td></td><td></td><td></td><td></td><td></td>'
+    +'<td id="tot-marcos"></td><td id="tot-peso"></td><td></td><td></td><td></td></tr>';
+  document.getElementById('ing-body').innerHTML=html;
+  const now=new Date();
+  document.getElementById('ing-mes').value=now.getMonth()+1;
+  document.getElementById('ing-fecha').value=now.toISOString().split('T')[0];
+}
+function ic(i,f,t,mw){
+  const cls=t==='text'?'ci ci-txt':'ci';
+  return '<td class="td-cell"><input type="'+t+'" class="'+cls+'" id="r'+i+'-'+f+'" placeholder="—" style="min-width:'+mw+'px" oninput="updateTotals()"/></td>';
+}
+function onSku(i){
+  const sku=document.getElementById('r'+i+'-sku').value;
+  const el=document.getElementById('r'+i+'-mpdesc');
+  if(sku){el.textContent=gDesc(sku);el.style.color='var(--accent)';el.style.fontWeight='500';}
+  else{el.textContent='—';el.style.color='var(--muted)';el.style.fontWeight='400';}
+}
+function applyDateAll(){
+  const fecha=document.getElementById('ing-fecha').value;
+  if(!fecha) return;
+  FILAS_ING.forEach((_,i)=>{
+    const el=document.getElementById('r'+i+'-fecha');
+    if(el&&rowState[i].mode==='input'){el.value=fecha;el.classList.add('has-v');}
+  });
+}
+function gn(i,f){const el=document.getElementById('r'+i+'-'+f);return el?parseFloat(el.value)||0:0;}
+function gt(i,f){const el=document.getElementById('r'+i+'-'+f);return el?el.value.trim():'';}
+function updateTotals(){
+  [['kg','tot-kg'],['color','tot-color'],['psf','tot-psf'],['kgsf','tot-kgsf'],['pmlos','tot-pmlos'],['kgpan','tot-kgpan']].forEach(([f,id])=>{
+    let s=0; FILAS_ING.forEach((_,i)=>s+=gn(i,f));
+    const el=document.getElementById(id); if(el) el.textContent=s>0?fmtN(s):'';
+  });
+  let sm=0,sp=0; FILAS_ING.forEach((_,i)=>{sm+=gn(i,'marcos');sp+=gn(i,'peso');});
+  const tm=document.getElementById('tot-marcos'); if(tm) tm.textContent=sm>0?sm:'';
+  const tp=document.getElementById('tot-peso'); if(tp) tp.textContent=sp>0?fmtN(sp):'';
+}
+function buildRec(i,f,mes,fecha,sku){
+  const kg=gn(i,'kg');
+  return {sku:sku||null,descripcion:sku?gDesc(sku):null,mes,anio:2026,fecha_registro:fecha||null,
+    kg,costo_usd:parseFloat((kg*gPrecio(sku)).toFixed(4)),maquina:f.maquina,cuenta:f.cuenta,tipo_panel:'PURGA',
+    purga_color:gn(i,'color'),paneles_sin_frame:gn(i,'psf'),kg_paneles_sin_frame:gn(i,'kgsf'),
+    paneles_malos:gn(i,'pmlos'),kg_panel:gn(i,'kgpan'),medida:gt(i,'medida'),
+    altura:document.getElementById('r'+i+'-altura').value?parseFloat(document.getElementById('r'+i+'-altura').value):null,
+    slot:gt(i,'slot'),descri:gt(i,'descri'),of_numero:gt(i,'of'),
+    marcos:gn(i,'marcos'),peso_real:gn(i,'peso'),mp_sku:sku||null,mp_descripcion:sku?gDesc(sku):null};
+}
+async function guardarFila(i){
+  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede guardar','err');return;}
+  if(!sb) return;
+  const f=FILAS_ING[i], mes=parseInt(document.getElementById('ing-mes').value);
+  const sku=document.getElementById('r'+i+'-sku').value;
+  const fecha=gt(i,'fecha')||document.getElementById('ing-fecha').value;
+  if(gn(i,'kg')<=0&&gn(i,'psf')<=0&&gn(i,'pmlos')<=0){showAlert('ing',f.maquina+': ingresa al menos kilos o paneles','err');return;}
+  const actEl=document.querySelector('#ing-body tr[data-row="'+i+'"] .td-act');
+  actEl.innerHTML='<span style="font-size:11px;color:var(--muted)">...</span>';
+  const {data,error}=await sb.from('purgas').insert(buildRec(i,f,mes,fecha,sku)).select().single();
+  if(error){actEl.innerHTML='<button class="btn btn-g btn-sm" onclick="guardarFila('+i+')">💾</button>';showAlert('ing','Error: '+error.message,'err');return;}
+  rowState[i]={mode:'saved',dbId:data.id};
+  setRowRO(i,data);
+  loadRecientes();
+  showAlert('ing','✓ '+f.cuenta+'/'+f.maquina+' guardado','ok');
+}
+async function guardarTodo(){
+  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede guardar','err');return;}
+  if(!sb) return;
+  const mes=parseInt(document.getElementById('ing-mes').value);
+  const fg=document.getElementById('ing-fecha').value;
+  const recs=[];
+  FILAS_ING.forEach((f,i)=>{
+    if(rowState[i].mode==='saved') return;
+    const sku=document.getElementById('r'+i+'-sku').value;
+    const fecha=gt(i,'fecha')||fg;
+    if(gn(i,'kg')>0||gn(i,'psf')>0||gn(i,'pmlos')>0) recs.push({...buildRec(i,f,mes,fecha,sku),_i:i});
+  });
+  if(!recs.length){showAlert('ing','No hay datos nuevos para guardar','err');return;}
+  document.getElementById('ing-status').textContent='Guardando...';
+  const toIns=recs.map(({_i,...r})=>r);
+  const {data,error}=await sb.from('purgas').insert(toIns).select();
+  document.getElementById('ing-status').textContent='';
+  if(error){showAlert('ing','Error: '+error.message,'err');return;}
+  data.forEach((dbR,idx)=>{const i=recs[idx]._i;rowState[i]={mode:'saved',dbId:dbR.id};setRowRO(i,dbR);});
+  showAlert('ing','✓ '+data.length+' fila(s) guardadas','ok');
+  loadRecientes();
+}
+function setRowRO(i,d){
+  const row=document.querySelector('#ing-body tr[data-row="'+i+'"]');
+  const vals=[d.fecha_registro||'—',nv(d.kg),nv(d.purga_color),nv(d.paneles_sin_frame),nv(d.kg_paneles_sin_frame),nv(d.paneles_malos),nv(d.kg_panel),sv(d.medida),sv(d.altura),sv(d.slot),sv(d.descri),sv(d.of_numero),nv(d.marcos),nv(d.peso_real),d.mp_sku||'—',d.mp_descripcion||'—'];
+  row.querySelectorAll('.td-cell').forEach((td,ci)=>{
+    const v=vals[ci]!==undefined?vals[ci]:'—';
+    td.innerHTML='<span class="td-ro'+(v==='—'?' empty-v':'')+'">'+v+'</span>';
+  });
+  row.querySelector('.td-act').innerHTML='<button class="btn btn-b btn-sm" onclick="editarFila('+i+')">✏</button>'+(isAdmin()?'<button class="del-btn" style="margin-left:3px" onclick="eliminarFila('+i+','+d.id+')">✕</button>':'');
+}
+async function editarFila(i){
+  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede editar','err');return;}
+  if(rowState[i].dbId) await sb.from('purgas').delete().eq('id',rowState[i].dbId);
+  rowState[i]={mode:'input',dbId:null};
+  buildIngresoTableRow(i);
+}
+function buildIngresoTableRow(i){
+  const f=FILAS_ING[i];
+  const skuOpts='<option value="">—</option>'+SKU_ORDER.map(k=>'<option value="'+k+'">'+k+'</option>').join('');
+  const altOpts='<option value="">—</option>'+ALTURAS.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
+  const row=document.querySelector('#ing-body tr[data-row="'+i+'"]');
+  row.querySelector('.td-act').innerHTML='<button class="btn btn-g btn-sm" onclick="guardarFila('+i+')">💾</button>';
+  const cells=row.querySelectorAll('.td-cell');
+  const fields=[['fecha','date',70],['kg','number',62],['color','number',62],['psf','number',62],['kgsf','number',65],['pmlos','number',62],['kgpan','number',62],['medida','text',68],['altura','sel',68],['slot','text',55],['descri','text',75],['of','text',55],['marcos','number',55],['peso','number',62],['sku','sel',80],['mpdesc','ro',160]];
+  cells.forEach((td,ci)=>{
+    const [f2,t,mw]=fields[ci];
+    if(t==='sel'&&f2==='altura') td.innerHTML='<select class="ci-sel" id="r'+i+'-altura" style="min-width:'+mw+'px">'+altOpts+'</select>';
+    else if(t==='sel'&&f2==='sku') td.innerHTML='<select class="ci-sel" id="r'+i+'-sku" onchange="onSku('+i+')" style="min-width:'+mw+'px">'+skuOpts+'</select>';
+    else if(t==='ro') td.innerHTML='<span id="r'+i+'-mpdesc" style="padding:0 8px;font-size:11px;color:var(--muted);min-width:'+mw+'px;display:inline-block">—</span>';
+    else{ const cls=t==='text'?'ci ci-txt':'ci'; td.innerHTML='<input type="'+t+'" class="'+cls+'" id="r'+i+'-'+f2+'" placeholder="—" style="min-width:'+mw+'px" oninput="updateTotals()"/>'; }
+  });
+}
+async function eliminarFila(i,dbId){
+  if(!isAdmin()) return;
+  if(!confirm('¿Eliminar?')) return;
+  await sb.from('purgas').delete().eq('id',dbId);
+  rowState[i]={mode:'input',dbId:null};
+  buildIngresoTableRow(i);
+  loadRecientes();
+}
+function limpiarIngreso(){
+  FILAS_ING.forEach((_,i)=>{
+    if(rowState[i].mode==='input'){
+      document.querySelectorAll('#ing-body tr[data-row="'+i+'"] input').forEach(el=>{el.value='';el.classList.remove('has-v');});
+      document.querySelectorAll('#ing-body tr[data-row="'+i+'"] select.ci-sel').forEach(el=>el.value='');
+      const d=document.getElementById('r'+i+'-mpdesc');
+      if(d){d.textContent='—';d.style.color='var(--muted)';d.style.fontWeight='400';}
+    }
+  });
+  updateTotals();
+}
+function parseFecha(val){
+  if(!val) return null;
+  const s=String(val).trim();
+  if(!s) return null;
+  if(!isNaN(s)&&parseInt(s)>1000){
+    const d=new Date(1899,11,30);d.setDate(d.getDate()+parseInt(s));
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const p=s.split(/[-\/]/);
+  if(p.length===3){
+    if(p[0].length===4) return p[0]+'-'+p[1].padStart(2,'0')+'-'+p[2].padStart(2,'0');
+    return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
+  }
+  return s||null;
+}
+async function importarExcel(input){
+  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede importar','err');input.value='';return;}
+  if(!sb) return;
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const dataRows=raw.filter((r,i)=>i>0&&(r[0]||r[1]));
+    if(!dataRows.length){showAlert('ing','No se encontraron datos','err');return;}
+    const mes=parseInt(document.getElementById('ing-mes').value);
+    const recs=dataRows.map(r=>{
+      const sku=String(r[16]||'').trim();
+      const kg=parseFloat(r[3])||0;
+      const fechaStr=parseFecha(r[2]);
+      let mesR=mes,anio=2026;
+      if(fechaStr&&fechaStr.includes('-')){const p=fechaStr.split('-');anio=parseInt(p[0])||2026;mesR=parseInt(p[1])||mes;}
+      return {cuenta:String(r[0]||'').trim(),maquina:String(r[1]||'').trim(),fecha_registro:fechaStr,
+        mes:mesR,anio,kg,costo_usd:parseFloat((kg*gPrecio(sku)).toFixed(4)),
+        purga_color:parseFloat(r[4])||0,paneles_sin_frame:parseFloat(r[5])||0,
+        kg_paneles_sin_frame:parseFloat(r[6])||0,paneles_malos:parseFloat(r[7])||0,
+        kg_panel:parseFloat(r[8])||0,medida:String(r[9]||'').trim(),
+        altura:parseFloat(r[10])||null,slot:String(r[11]||'').trim(),
+        descri:String(r[12]||'').trim(),of_numero:String(r[13]||'').trim(),
+        marcos:parseInt(r[14])||0,peso_real:parseFloat(r[15])||0,
+        mp_sku:sku||null,mp_descripcion:sku?gDesc(sku):null,tipo_panel:'PURGA'};
+    }).filter(r=>r.cuenta&&r.maquina&&(r.kg>0||r.paneles_sin_frame>0||r.paneles_malos>0));
+    if(!recs.length){showAlert('ing','No hay filas válidas en el archivo','err');return;}
+    if(!confirm('Importar '+recs.length+' registros?')) return;
+    document.getElementById('ing-status').textContent='Importando...';
+    const {error}=await sb.from('purgas').insert(recs);
+    document.getElementById('ing-status').textContent='';
+    input.value='';
+    if(error){showAlert('ing','Error: '+error.message,'err');return;}
+    showAlert('ing','✓ '+recs.length+' registros importados','ok');
+    loadRecientes();
+  };
+  reader.readAsArrayBuffer(file);
+}
+async function loadRecientes(){
+  if(!sb) return;
+  const {data}=await sb.from('purgas').select('*').order('created_at',{ascending:false}).limit(30);
+  const rows=data||[];
+  if(!rows.length){document.getElementById('ing-hist').innerHTML='<div class="empty">Sin registros</div>';return;}
+  let t='<table><thead><tr><th>Cuenta</th><th>Máquina</th><th>Mes</th><th>Fecha</th><th class="tr">Kg</th><th class="tr">P.Color</th><th class="tr">P.s/f</th><th class="tr">P.Malos</th><th>MP SKU</th><th>MP Descripción</th><th class="tr">Costo USD</th><th></th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    t+='<tr><td><span class="badge badge-g">'+( r.cuenta||'—' )+'</span></td>'
+      +'<td>'+( r.maquina||'—' )+'</td>'
+      +'<td>'+( MSL[r.mes]||r.mes )+'</td>'
+      +'<td class="muted">'+( r.fecha_registro||'—' )+'</td>'
+      +'<td class="tr">'+( (r.kg||0).toFixed(1) )+'</td>'
+      +'<td class="tr">'+( (r.purga_color||0).toFixed(1) )+'</td>'
+      +'<td class="tr">'+( (r.paneles_sin_frame||0).toFixed(1) )+'</td>'
+      +'<td class="tr">'+( (r.paneles_malos||0).toFixed(1) )+'</td>'
+      +'<td><span class="badge badge-gray" style="font-size:10px">'+( r.mp_sku||'—' )+'</span></td>'
+      +'<td class="muted" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.mp_descripcion||'—' )+'</td>'
+      +'<td class="tr">$'+( fmtM(r.costo_usd||0) )+'</td>'
+      +'<td>'+( isAdmin()?'<button class="del-btn" onclick="delReciente('+r.id+')">✕</button>':'' )+'</td></tr>';
+  });
+  t+='</tbody></table>';
+  document.getElementById('ing-hist').innerHTML=t;
+}
+async function delReciente(id){
+  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede eliminar','err');return;}
+  if(!confirm('¿Eliminar?')) return;
+  await sb.from('purgas').delete().eq('id',id);
+  loadRecientes();
+}
+
+// ════════════════════════════════════════════════════════
+// RESUMEN
+// ════════════════════════════════════════════════════════
+function calcCostos(r){
+  const sku=r.mp_sku||r.sku||'';
+  const pMP=gPrecio(sku), cPan=gCPan(sku);
+  const kgB=(parseFloat(r.kg)||0)+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+  return {pMP,cPan,costoMP:kgB*pMP,costoPan:(parseFloat(r.paneles_malos)||0)*cPan};
+}
+async function loadResumen(){
+  if(!sb) return;
+  await loadMaestro();
+  document.getElementById('res-body').innerHTML='<tr><td colspan="21"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr>';
+  let q=sb.from('purgas').select('*').eq('tipo_panel','PURGA').order('fecha_registro',{ascending:false}).order('created_at',{ascending:false});
+  const mes=document.getElementById('r-mes').value;
+  const cta=document.getElementById('r-cta').value;
+  const maq=document.getElementById('r-maq').value;
+  if(mes) q=q.eq('mes',parseInt(mes));
+  if(cta) q=q.eq('cuenta',cta);
+  if(maq) q=q.eq('maquina',maq);
+  const {data}=await q;
+  allResumen=data||[];
+  let html='',sumKg=0,sumMP=0,sumPan=0;
+  allResumen.forEach(r=>{
+    const c=calcCostos(r);
+    sumKg+=parseFloat(r.kg)||0; sumMP+=c.costoMP; sumPan+=c.costoPan;
+    html+='<tr>'
+      +'<td><span class="badge badge-g" style="font-size:10px">'+( r.cuenta||'—' )+'</span></td>'
+      +'<td style="font-size:11.5px">'+( r.maquina||'—' )+'</td>'
+      +'<td class="tc muted">'+( r.fecha_registro||'—' )+'</td>'
+      +'<td class="tc">'+( MSL[r.mes]||r.mes )+'</td>'
+      +'<td class="tr">'+( nv(r.kg) )+'</td>'
+      +'<td class="tr">'+( nv(r.purga_color) )+'</td>'
+      +'<td class="tr">'+( nv(r.paneles_sin_frame) )+'</td>'
+      +'<td class="tr">'+( nv(r.kg_paneles_sin_frame) )+'</td>'
+      +'<td class="tr">'+( nv(r.paneles_malos) )+'</td>'
+      +'<td class="tr">'+( nv(r.kg_panel) )+'</td>'
+      +'<td class="tc muted">'+( sv(r.medida) )+'</td>'
+      +'<td class="tc muted">'+( sv(r.altura) )+'</td>'
+      +'<td class="tc muted">'+( sv(r.slot) )+'</td>'
+      +'<td class="tc muted">'+( sv(r.of_numero) )+'</td>'
+      +'<td class="tc"><span class="badge badge-gray" style="font-size:10px">'+( r.mp_sku||r.sku||'—' )+'</span></td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.mp_descripcion||gDesc(r.mp_sku||r.sku||'')||'—' )+'</td>'
+      +'<td class="tr" style="background:#EFF6FF"><span style="color:var(--blue);font-weight:500">'+( c.pMP>0?'$'+fmtM(c.pMP):'—' )+'</span></td>'
+      +'<td class="tr" style="background:#EFF6FF"><span style="color:var(--blue);font-weight:500">'+( $v(c.costoMP) )+'</span></td>'
+      +'<td class="tr" style="background:#FFFBEB"><span style="color:var(--gold);font-weight:500">'+( c.cPan>0?'$'+fmtM0(c.cPan):'—' )+'</span></td>'
+      +'<td class="tr" style="background:#FFFBEB"><span style="color:var(--gold);font-weight:500">'+( $v(c.costoPan) )+'</span></td>'
+      +'<td class="tc" style="padding:3px 5px">'+( isAdmin()?'<button class="btn btn-b btn-sm" onclick="openEditModal('+r.id+')">✏</button>':'' )+'</td>'
+      +'</tr>';
+  });
+  html+='<tr class="tr-total-b"><td colspan="4" style="text-align:left;padding-left:12px">TOTALES — '+allResumen.length+' registros</td>'
+    +'<td class="tr">'+fmtN(sumKg)+'</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>'
+    +'<td class="tr" style="background:#DBEAFE">—</td>'
+    +'<td class="tr" style="background:#DBEAFE"><span style="color:var(--blue);font-weight:600">$'+fmtM(sumMP)+'</span></td>'
+    +'<td class="tr" style="background:#FEF3C7">—</td>'
+    +'<td class="tr" style="background:#FEF3C7"><span style="color:var(--gold);font-weight:600">$'+fmtM(sumPan)+'</span></td>'
+    +'<td></td></tr>';
+  document.getElementById('res-body').innerHTML=html;
+  document.getElementById('rc-kg').textContent=sumKg>0?fmtN(sumKg)+' kg':'—';
+  document.getElementById('rc-mp').textContent=sumMP>0?'$'+fmtM(sumMP):'—';
+  document.getElementById('rc-pan').textContent=sumPan>0?'$'+fmtM(sumPan):'—';
+  document.getElementById('rc-reg').textContent=allResumen.length;
+}
+function exportResCSV(){
+  const h=['Cuenta','Maquina','Fecha','Mes','Kg','P_Color','P_SF','Kg_PSF','P_Malos','Kg_Panel','Medida','Altura','Slot','OF','MP_SKU','MP_Desc','CostoMP_KG','CostoMP_Total','CostoPan_UN','CostoPan_Total'];
+  const rows=allResumen.map(r=>{const c=calcCostos(r);return[r.cuenta,r.maquina,r.fecha_registro,MSL[r.mes],r.kg||0,r.purga_color||0,r.paneles_sin_frame||0,r.kg_paneles_sin_frame||0,r.paneles_malos||0,r.kg_panel||0,r.medida||'',r.altura||'',r.slot||'',r.of_numero||'',r.mp_sku||r.sku||'',r.mp_descripcion||'',c.pMP.toFixed(3),c.costoMP.toFixed(3),c.cPan.toFixed(0),c.costoPan.toFixed(0)];});
+  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='resumen_purga.csv';a.click();
+}
+
+// MODAL EDIT RESUMEN
+document.getElementById('modal-close-btn').addEventListener('click',()=>document.getElementById('modal-res').classList.remove('open'));
+document.getElementById('modal-cancel-btn').addEventListener('click',()=>document.getElementById('modal-res').classList.remove('open'));
+document.getElementById('modal-save-btn').addEventListener('click', saveEditModal);
+document.getElementById('modal-res').addEventListener('click',function(e){if(e.target===this) this.classList.remove('open');});
+
+function openEditModal(id){
+  if(!isAdmin()) return;
+  const row=allResumen.find(r=>r.id===id); if(!row) return;
+  editResId=id;
+  document.getElementById('modal-info').textContent=( row.cuenta||'—' )+' / '+( row.maquina||'—' )+' / '+( row.fecha_registro||'—' )+' — '+( MSL[row.mes]||row.mes );
+  document.getElementById('me-kg').value=row.kg||'';
+  document.getElementById('me-color').value=row.purga_color||'';
+  document.getElementById('me-psf').value=row.paneles_sin_frame||'';
+  document.getElementById('me-kgsf').value=row.kg_paneles_sin_frame||'';
+  document.getElementById('me-pmlos').value=row.paneles_malos||'';
+  document.getElementById('me-kgpan').value=row.kg_panel||'';
+  document.getElementById('me-medida').value=row.medida||'';
+  document.getElementById('me-altura').value=row.altura||'';
+  document.getElementById('me-slot').value=row.slot||'';
+  document.getElementById('me-of').value=row.of_numero||'';
+  document.getElementById('me-marcos').value=row.marcos||'';
+  document.getElementById('me-peso').value=row.peso_real||'';
+  document.getElementById('modal-res').classList.add('open');
+}
+async function saveEditModal(){
+  if(!editResId||!sb) return;
+  const updates={
+    kg:parseFloat(document.getElementById('me-kg').value)||0,
+    purga_color:parseFloat(document.getElementById('me-color').value)||0,
+    paneles_sin_frame:parseFloat(document.getElementById('me-psf').value)||0,
+    kg_paneles_sin_frame:parseFloat(document.getElementById('me-kgsf').value)||0,
+    paneles_malos:parseFloat(document.getElementById('me-pmlos').value)||0,
+    kg_panel:parseFloat(document.getElementById('me-kgpan').value)||0,
+    medida:document.getElementById('me-medida').value.trim(),
+    altura:document.getElementById('me-altura').value?parseFloat(document.getElementById('me-altura').value):null,
+    slot:document.getElementById('me-slot').value.trim(),
+    of_numero:document.getElementById('me-of').value.trim(),
+    marcos:parseInt(document.getElementById('me-marcos').value)||0,
+    peso_real:parseFloat(document.getElementById('me-peso').value)||0
+  };
+  const {error}=await sb.from('purgas').update(updates).eq('id',editResId);
+  if(error){alert('Error: '+error.message);return;}
+  document.getElementById('modal-res').classList.remove('open');
+  editResId=null;
+  loadResumen();
+}
+
+// ════════════════════════════════════════════════════════
+// ANÁLISIS
+// ════════════════════════════════════════════════════════
+async function loadAnalisis(){
+  if(!sb) return;
+  await loadMaestro();
+  const anio=parseInt(document.getElementById('an-anio').value);
+  anStore={t1:{},t2:{},t3:{},t4:{},t5:{},t6:{}};
+  SKU_ORDER.forEach(s=>{anStore.t1[s]=Array(12).fill(0);anStore.t2[s]=Array(12).fill(0);});
+  CUENTAS.forEach(c=>{anStore.t3[c]=Array(12).fill(0);anStore.t4[c]=Array(12).fill(0);});
+  MAQUINAS.forEach(m=>{anStore.t5[m]=Array(12).fill(0);anStore.t6[m]=Array(12).fill(0);});
+  const {data}=await sb.from('purgas').select('mp_sku,sku,mes,kg,purga_color,kg_paneles_sin_frame,cuenta,maquina').eq('anio',anio).eq('tipo_panel','PURGA');
+  (data||[]).forEach(r=>{
+    const sku=r.mp_sku||r.sku||'19990', mes=parseInt(r.mes)-1;
+    if(mes<0||mes>11) return;
+    const kg=parseFloat(r.kg)||0;
+    const kgB=kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+    const costo=kgB*gPrecio(sku);
+    const cta=r.cuenta||'SIN CUENTA', maq=r.maquina||'SIN MÁQUINA';
+    if(!anStore.t1[sku]){anStore.t1[sku]=Array(12).fill(0);anStore.t2[sku]=Array(12).fill(0);}
+    anStore.t1[sku][mes]+=kg; anStore.t2[sku][mes]+=costo;
+    if(!anStore.t3[cta]){anStore.t3[cta]=Array(12).fill(0);anStore.t4[cta]=Array(12).fill(0);}
+    anStore.t3[cta][mes]+=kg; anStore.t4[cta][mes]+=costo;
+    if(!anStore.t5[maq]){anStore.t5[maq]=Array(12).fill(0);anStore.t6[maq]=Array(12).fill(0);}
+    anStore.t5[maq][mes]+=kg; anStore.t6[maq][mes]+=costo;
+  });
+  renderAnKG('t1',SKU_ORDER,true,'an-t1-cols','an-t1-body');
+  renderAnCost('t2',SKU_ORDER,true,'an-t2-cols','an-t2-body');
+  renderAnKG('t3',CUENTAS,false,'an-t3-cols','an-t3-body');
+  renderAnCost('t4',CUENTAS,false,'an-t4-cols','an-t4-body');
+  renderAnKG('t5',MAQUINAS,false,'an-t5-cols','an-t5-body');
+  renderAnCost('t6',MAQUINAS,false,'an-t6-cols','an-t6-body');
+}
+function buildAnCols(colsId,hasSku,hasMom){
+  const el=document.getElementById(colsId);
+  let h=hasSku?'<th class="left" style="min-width:65px">SKU</th>':'';
+  h+='<th class="left" style="min-width:165px">DESCRIPCION</th>';
+  ML.forEach(m=>h+='<th>'+m+'</th>');
+  h+='<th style="min-width:60px">TOTAL</th>';
+  if(hasMom) h+='<th style="min-width:58px">MOM%</th>';
+  el.innerHTML=h;
+}
+function renderAnKG(key,keys,hasSku,colsId,bodyId){
+  buildAnCols(colsId,hasSku,false);
+  const data=anStore[key], tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...keys,...Object.keys(data)])];
+  allK.forEach(k=>{
+    const vals=data[k]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    vals.forEach((v,i)=>tots[i]+=v);
+    html+='<tr>'+(hasSku?'<td class="muted" style="font-size:11px">'+k+'</td>':'')
+      +'<td style="font-size:11.5px;white-space:nowrap">'+gDesc(k)+'</td>'
+      +vals.map(v=>v>0?'<td class="tr" style="font-weight:500">'+fmtN(v)+'</td>':'<td class="tr muted">0</td>').join('')
+      +'<td class="tr" style="background:#FEFCE8;color:var(--gold);font-weight:600">'+( tot>0?fmtN(tot):'0' )+'</td></tr>';
+  });
+  const gt=tots.reduce((a,b)=>a+b,0);
+  html+='<tr class="tr-total-y">'+(hasSku?'<td>TOTAL</td>':'')+'<td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?fmtN(v):'—' )+'</td>').join('')
+    +'<td class="tr">'+fmtN(gt)+'</td></tr>';
+  document.getElementById(bodyId).innerHTML=html||emptyRow(hasSku?16:15);
+}
+function renderAnCost(key,keys,hasSku,colsId,bodyId){
+  buildAnCols(colsId,hasSku,true);
+  const data=anStore[key], tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...keys,...Object.keys(data)])];
+  allK.forEach(k=>{
+    const vals=data[k]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    vals.forEach((v,i)=>tots[i]+=v);
+    html+='<tr>'+(hasSku?'<td class="muted" style="font-size:11px">'+k+'</td>':'')
+      +'<td style="font-size:11.5px;white-space:nowrap">'+gDesc(k)+'</td>'
+      +vals.map(v=>v>0?'<td class="tr" style="color:var(--blue);font-weight:500">$'+fmtM(v)+'</td>':'<td class="tr muted">$ -</td>').join('')
+      +'<td class="tr" style="background:#DBEAFE;color:var(--blue);font-weight:600">'+( tot>0?'$'+fmtM(tot):'$ -' )+'</td>'
+      +'<td class="tr">'+momHtml(vals)+'</td></tr>';
+  });
+  const gt=tots.reduce((a,b)=>a+b,0);
+  html+='<tr class="tr-total-b">'+(hasSku?'<td>TOTAL</td>':'')+'<td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?'$'+fmtM(v):'$ -' )+'</td>').join('')
+    +'<td class="tr">$'+fmtM(gt)+'</td><td></td></tr>';
+  document.getElementById(bodyId).innerHTML=html||emptyRow(hasSku?16:15);
+}
+function exportAnTodo(){
+  const wb=XLSX.utils.book_new();
+  addAnSheet(wb,anStore.t1,SKU_ORDER,true,false,'Purga 2026 KG');
+  addAnSheet(wb,anStore.t2,SKU_ORDER,true,true,'Costo Purga');
+  addAnSheet(wb,anStore.t3,CUENTAS,false,false,'Purga x Cuenta KG');
+  addAnSheet(wb,anStore.t4,CUENTAS,false,true,'Purga x Cuenta $');
+  addAnSheet(wb,anStore.t5,MAQUINAS,false,false,'Purga x Maquina KG');
+  addAnSheet(wb,anStore.t6,MAQUINAS,false,true,'Purga x Maquina $');
+  XLSX.writeFile(wb,'analisis_purga_2026.xlsx');
+}
+function exportAnSheet(key){
+  const cfg={t1:{keys:SKU_ORDER,hs:true,ic:false,n:'Purga 2026 KG'},t2:{keys:SKU_ORDER,hs:true,ic:true,n:'Costo Purga'},t3:{keys:CUENTAS,hs:false,ic:false,n:'Purga x Cuenta KG'},t4:{keys:CUENTAS,hs:false,ic:true,n:'Purga x Cuenta $'},t5:{keys:MAQUINAS,hs:false,ic:false,n:'Purga x Maquina KG'},t6:{keys:MAQUINAS,hs:false,ic:true,n:'Purga x Maquina $'}}[key];
+  const wb=XLSX.utils.book_new(); addAnSheet(wb,anStore[key],cfg.keys,cfg.hs,cfg.ic,cfg.n);
+  XLSX.writeFile(wb,cfg.n.replace(/ /g,'_')+'_2026.xlsx');
+}
+function addAnSheet(wb,data,keys,hasSku,isCost,name){
+  const hdr=hasSku?['SKU','DESCRIPCION']:['DESCRIPCION'];
+  hdr.push(...ML,'TOTAL'); if(isCost) hdr.push('MOM%');
+  const allK=[...new Set([...keys,...Object.keys(data)])];
+  const rows=allK.map(k=>{
+    const vals=data[k]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    const base=hasSku?[k,gDesc(k)]:[gDesc(k)];
+    const row=[...base,...vals,tot];
+    if(isCost){const m=calcMOM(vals);row.push(m!==null?(m+'%'):'0%');}
+    return row;
+  });
+  const tots=Array(12).fill(0);
+  allK.forEach(k=>(data[k]||[]).forEach((v,i)=>tots[i]+=v));
+  const totRow=hasSku?['','TOTAL POR MES']:['TOTAL POR MES'];
+  totRow.push(...tots,tots.reduce((a,b)=>a+b,0)); if(isCost) totRow.push('');
+  rows.push(totRow);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdr,...rows]),name);
+}
+
+// ════════════════════════════════════════════════════════
+// PANELES MALOS
+// ════════════════════════════════════════════════════════
+async function loadPaneles(){
+  if(!sb) return;
+  await loadMaestro();
+  const anio=parseInt(document.getElementById('pan-anio').value);
+  panT1={}; panT2={};
+  SKU_ORDER.forEach(s=>{panT1[s]=Array(12).fill(0);panT2[s]=Array(12).fill(0);});
+  const {data}=await sb.from('purgas').select('mp_sku,sku,mes,paneles_malos').eq('anio',anio);
+  (data||[]).forEach(r=>{
+    const sku=r.mp_sku||r.sku||'19990', mes=parseInt(r.mes)-1;
+    if(mes<0||mes>11) return;
+    const pm=parseFloat(r.paneles_malos)||0;
+    if(!panT1[sku]){panT1[sku]=Array(12).fill(0);panT2[sku]=Array(12).fill(0);}
+    panT1[sku][mes]+=pm; panT2[sku][mes]+=pm*gCPan(sku);
+  });
+  renderPanT1(); renderPanT2();
+}
+function renderPanT1(){
+  const tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...SKU_ORDER,...Object.keys(panT1)])];
+  allK.forEach(sku=>{
+    const vals=panT1[sku]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    vals.forEach((v,i)=>tots[i]+=v);
+    html+='<tr><td class="muted" style="font-size:11px">'+sku+'</td><td style="font-size:11.5px;white-space:nowrap">'+gDesc(sku)+'</td>'
+      +vals.map(v=>v>0?'<td class="tr" style="font-weight:500">'+fmtN(v)+'</td>':'<td class="tr muted">0</td>').join('')
+      +'<td class="tr" style="background:#FEFCE8;color:var(--gold);font-weight:600">'+( tot>0?fmtN(tot):'0' )+'</td></tr>';
+  });
+  const gt=tots.reduce((a,b)=>a+b,0);
+  html+='<tr class="total-row"><td>TOTAL</td><td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?fmtN(v):'—' )+'</td>').join('')+'<td class="tr">'+fmtN(gt)+'</td></tr>';
+  document.getElementById('pan-t1-body').innerHTML=html;
+}
+function renderPanT2(){
+  const tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...SKU_ORDER,...Object.keys(panT2)])];
+  allK.forEach(sku=>{
+    const vals=panT2[sku]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    vals.forEach((v,i)=>tots[i]+=v);
+    html+='<tr><td style="font-size:11.5px;white-space:nowrap">'+gDesc(sku)+'</td>'
+      +vals.map(v=>v>0?'<td class="tr" style="color:var(--blue);font-weight:500">$'+fmtM(v)+'</td>':'<td class="tr muted">$ —</td>').join('')
+      +'<td class="tr" style="background:#DBEAFE;color:var(--blue);font-weight:600">'+( tot>0?'$'+fmtM(tot):'$ —' )+'</td>'
+      +'<td class="tr">'+momHtml(vals)+'</td></tr>';
+  });
+  const gt=tots.reduce((a,b)=>a+b,0);
+  html+='<tr class="total-row"><td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?'$'+fmtM(v):'$ —' )+'</td>').join('')
+    +'<td class="tr">$'+fmtM(gt)+'</td><td></td></tr>';
+  document.getElementById('pan-t2-body').innerHTML=html;
+}
+function exportPanTodo(){
+  const wb=XLSX.utils.book_new();
+  addPanSheet(wb,panT1,true,'Paneles Malos'); addPanSheet(wb,panT2,false,'Costo Paneles');
+  XLSX.writeFile(wb,'paneles_malos_2026.xlsx');
+}
+function exportPanT1(){const wb=XLSX.utils.book_new();addPanSheet(wb,panT1,true,'Paneles Malos');XLSX.writeFile(wb,'paneles_cant.xlsx');}
+function exportPanT2(){const wb=XLSX.utils.book_new();addPanSheet(wb,panT2,false,'Costo Paneles');XLSX.writeFile(wb,'costo_paneles.xlsx');}
+function addPanSheet(wb,data,hasSku,name){
+  const hdr=hasSku?['SKU','DESCRIPCION']:['DESCRIPCION'];
+  hdr.push(...ML,'TOTAL'); if(!hasSku) hdr.push('MOM%');
+  const allK=[...new Set([...SKU_ORDER,...Object.keys(data)])];
+  const rows=allK.map(k=>{
+    const vals=data[k]||Array(12).fill(0);
+    const tot=vals.reduce((a,b)=>a+b,0);
+    const base=hasSku?[k,gDesc(k)]:[gDesc(k)];
+    const row=[...base,...vals,tot];
+    if(!hasSku){const m=calcMOM(vals);row.push(m!==null?(m+'%'):'0%');}
+    return row;
+  });
+  const tots=Array(12).fill(0);
+  allK.forEach(k=>(data[k]||[]).forEach((v,i)=>tots[i]+=v));
+  const totRow=hasSku?['','TOTAL POR MES']:['TOTAL POR MES'];
+  totRow.push(...tots,tots.reduce((a,b)=>a+b,0)); if(!hasSku) totRow.push('');
+  rows.push(totRow);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdr,...rows]),name);
+}
+
+// ════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════
+async function loadData(){
+  if(!sb) return;
+  const {data}=await sb.from('maestro_sku').select('*').order('sku');
+  allDataItems=data||[];
+  renderData(allDataItems);
+}
+function renderData(rows){
+  document.getElementById('d-count').textContent=rows.length+' item'+(rows.length!==1?'s':'');
+  if(!rows.length){document.getElementById('d-body').innerHTML='<tr><td colspan="6"><div class="empty">Sin materiales</div></td></tr>';return;}
+  let html='';
+  rows.forEach(r=>{
+    const p=r.precio_unitario!=null?'$ '+parseFloat(r.precio_unitario).toLocaleString('es-CL',{minimumFractionDigits:3,maximumFractionDigits:3}):'$ —';
+    const cp=r.costo_un_paneles>0?'$ '+parseFloat(r.costo_un_paneles).toLocaleString('es-CL',{maximumFractionDigits:0}):'$ —';
+    html+='<tr id="dtr-'+r.sku+'">'
+      +'<td><span class="sku-tag">'+r.sku+'</span></td>'
+      +'<td>'+( r.descripcion||'—' )+'</td>'
+      +'<td class="tr"><span class="price-c">'+p+'</span></td>'
+      +'<td><span class="um-tag">'+( r.unidad_medida||'KG' )+'</span></td>'
+      +'<td class="tr"><span class="price-c">'+cp+'</span></td>'
+      +'<td class="tc">'+( isAdmin()?'<button class="btn btn-b btn-sm" onclick="editMat(\''+r.sku+'\')">✏</button> <button class="del-btn" onclick="delMat(\''+r.sku+'\')">✕</button>':'<span class="muted" style="font-size:11px">Solo lectura</span>' )+'</td>'
+      +'</tr>';
+  });
+  document.getElementById('d-body').innerHTML=html;
+}
+function filterData(){
+  const q=document.getElementById('d-search').value.toLowerCase();
+  renderData(allDataItems.filter(r=>(r.sku||'').toLowerCase().includes(q)||(r.descripcion||'').toLowerCase().includes(q)));
+}
+function editMat(sku){
+  if(!isAdmin()) return;
+  if(dataEditSku) cancelEditMat();
+  dataEditSku=sku;
+  const row=allDataItems.find(r=>r.sku===sku); if(!row) return;
+  const tr=document.getElementById('dtr-'+sku); tr.style.background='#EFF6FF';
+  const umOpts=UM_OPTIONS.map(u=>'<option value="'+u+'"'+(u===(row.unidad_medida||'KG')?' selected':'')+'>'+u+'</option>').join('');
+  tr.innerHTML='<td><input class="ei" id="di-sku" value="'+row.sku+'" style="width:88px"/></td>'
+    +'<td><input class="ei" id="di-desc" value="'+(row.descripcion||'')+'" style="min-width:200px"/></td>'
+    +'<td><input class="ei right" id="di-precio" type="number" value="'+(row.precio_unitario||'')+'" step="0.001" min="0"/></td>'
+    +'<td><select class="ei-sel" id="di-um">'+umOpts+'</select></td>'
+    +'<td><input class="ei right" id="di-cpan" type="number" value="'+(row.costo_un_paneles||'')+'" step="1" min="0"/></td>'
+    +'<td class="tc"><button class="btn btn-g btn-sm" onclick="saveEditMat(\''+sku+'\')">✓</button> <button class="btn btn-sm" onclick="cancelEditMat()">✕</button></td>';
+}
+function cancelEditMat(){dataEditSku=null;renderData(allDataItems);}
+async function saveEditMat(oldSku){
+  if(!isAdmin()||!sb) return;
+  const newSku=document.getElementById('di-sku').value.trim();
+  const desc=document.getElementById('di-desc').value.trim();
+  const precio=parseFloat(document.getElementById('di-precio').value)||null;
+  const um=document.getElementById('di-um').value;
+  const cpan=parseFloat(document.getElementById('di-cpan').value)||null;
+  if(!newSku||!desc){showAlert('data','SKU y descripción son obligatorios','err');return;}
+  if(newSku!==oldSku){
+    await sb.from('maestro_sku').delete().eq('sku',oldSku);
+    const {error}=await sb.from('maestro_sku').insert({sku:newSku,descripcion:desc,precio_unitario:precio,unidad_medida:um,costo_un_paneles:cpan});
+    if(error){showAlert('data','Error: '+error.message,'err');return;}
+  } else {
+    const {error}=await sb.from('maestro_sku').update({descripcion:desc,precio_unitario:precio,unidad_medida:um,costo_un_paneles:cpan}).eq('sku',oldSku);
+    if(error){showAlert('data','Error: '+error.message,'err');return;}
+  }
+  dataEditSku=null;
+  showAlert('data','✓ Material actualizado','ok');
+  await loadMaestro(); loadData();
+}
+function nuevoMat(){
+  if(!isAdmin()) return;
+  if(dataEditSku) cancelEditMat();
+  const tbody=document.getElementById('d-body');
+  const umOpts=UM_OPTIONS.map(u=>'<option value="'+u+'"'+(u==='KG'?' selected':'')+'>'+u+'</option>').join('');
+  const nr=document.createElement('tr'); nr.id='dtr-new'; nr.style.background='#F0FFF4';
+  nr.innerHTML='<td><input class="ei" id="ni-sku" placeholder="SKU" style="width:88px"/></td>'
+    +'<td><input class="ei" id="ni-desc" placeholder="Descripción" style="min-width:200px"/></td>'
+    +'<td><input class="ei right" id="ni-precio" type="number" placeholder="0.000" step="0.001" min="0"/></td>'
+    +'<td><select class="ei-sel" id="ni-um">'+umOpts+'</select></td>'
+    +'<td><input class="ei right" id="ni-cpan" type="number" placeholder="0" step="1" min="0"/></td>'
+    +'<td class="tc"><button class="btn btn-g btn-sm" onclick="saveNuevoMat()">✓</button> <button class="btn btn-sm" onclick="document.getElementById(\'dtr-new\').remove()">✕</button></td>';
+  tbody.insertBefore(nr,tbody.firstChild);
+  document.getElementById('ni-sku').focus();
+}
+async function saveNuevoMat(){
+  if(!isAdmin()||!sb) return;
+  const sku=document.getElementById('ni-sku').value.trim();
+  const desc=document.getElementById('ni-desc').value.trim();
+  const precio=parseFloat(document.getElementById('ni-precio').value)||null;
+  const um=document.getElementById('ni-um').value;
+  const cpan=parseFloat(document.getElementById('ni-cpan').value)||null;
+  if(!sku||!desc){showAlert('data','SKU y descripción son obligatorios','err');return;}
+  const {error}=await sb.from('maestro_sku').insert({sku,descripcion:desc,precio_unitario:precio,unidad_medida:um,costo_un_paneles:cpan});
+  if(error){showAlert('data','Error: '+error.message,'err');return;}
+  showAlert('data','✓ '+sku+' agregado','ok');
+  await loadMaestro(); loadData();
+}
+async function delMat(sku){
+  if(!isAdmin()){showAlert('data','⛔ Solo el administrador puede eliminar','err');return;}
+  if(!confirm('¿Eliminar '+sku+'?')) return;
+  const {error}=await sb.from('maestro_sku').delete().eq('sku',sku);
+  if(error){showAlert('data','Error: '+error.message,'err');return;}
+  showAlert('data','✓ '+sku+' eliminado','ok');
+  await loadMaestro(); loadData();
+}
+async function importarMat(input){
+  if(!isAdmin()){showAlert('data','⛔ Solo el administrador puede importar','err');input.value='';return;}
+  if(!sb) return;
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const recs=raw.filter((r,i)=>i>0&&r[0]).map(r=>({
+      sku:String(r[0]).trim(),descripcion:String(r[1]).trim(),
+      precio_unitario:parseFloat(String(r[2]).replace(/[$,\s]/g,''))||null,
+      unidad_medida:String(r[3]).trim()||'KG',
+      costo_un_paneles:parseFloat(String(r[4]).replace(/[$,\s]/g,''))||null
+    })).filter(r=>r.sku&&r.descripcion);
+    if(!recs.length){showAlert('data','No se encontraron datos válidos','err');return;}
+    if(!confirm('Importar '+recs.length+' materiales?')) return;
+    const {error}=await sb.from('maestro_sku').upsert(recs,{onConflict:'sku'});
+    if(error){showAlert('data','Error: '+error.message,'err');return;}
+    showAlert('data','✓ '+recs.length+' materiales importados','ok');
+    input.value=''; await loadMaestro(); loadData();
+  };
+  reader.readAsArrayBuffer(file);
+}
+function exportDataCSV(){
+  const h=['SKU','Descripcion','Precio_Unitario','UN_Medida','Costo_UN_Paneles'];
+  const rows=allDataItems.map(r=>[r.sku,(r.descripcion||'').replace(/,/g,';'),r.precio_unitario||'',r.unidad_medida||'',r.costo_un_paneles||'']);
+  const csv=[h,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='maestro_materiales.csv';a.click();
+}
+</script>
+</body>
+</html>
