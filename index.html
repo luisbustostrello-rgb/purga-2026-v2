@@ -319,7 +319,10 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <button class="btn btn-p" id="btn-guardar-todo" onclick="guardarTodo()">💾 Guardar todo</button>
         <button class="btn btn-g btn-sm" id="btn-importar" onclick="document.getElementById('ing-xl').click()">⬆ Carga masiva Excel</button>
         <input type="file" id="ing-xl" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarExcel(this)"/>
-        <button class="btn btn-sm" id="btn-limpiar" onclick="limpiarIngreso()">↺ Limpiar</button>
+        <!-- ✅ FIX: Limpiar ya NO elimina registros de BD -->
+        <button class="btn btn-sm" id="btn-limpiar" onclick="limpiarIngreso()">↺ Limpiar vista</button>
+        <!-- ✅ NUEVO: Botón imprimir -->
+        <button class="btn btn-sm" style="background:#F3F4F6;border-color:#D1D5DB;color:#374151" onclick="imprimirIngreso()">🖨 Imprimir</button>
         <span id="ing-status" style="font-size:12px;color:var(--muted)"></span>
       </div>
       <div class="card tbl-wrap">
@@ -514,7 +517,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
 
 <script>
 // ════════════════════════════════════════════════════════
-// CONFIGURACIÓN — cambia estas credenciales
+// CONFIGURACIÓN
 // ════════════════════════════════════════════════════════
 const CFG = {
   url: 'https://ggjbbxtzielyexxhxivo.supabase.co',
@@ -729,7 +732,6 @@ async function loadDash(){
   const maxKg=Math.max(...kgM,1), maxC=Math.max(...cM,1);
   const KC=['#10B981','#059669','#047857','#34D399','#6EE7B7','#065F46','#0D9488','#0F766E','#14B8A6','#0891B2','#0284C7','#0369A1'];
   const CC=['#3B82F6','#2563EB','#1D4ED8','#60A5FA','#93C5FD','#1E40AF','#1E3A8A','#3B82F6','#60A5FA','#93C5FD','#BFDBFE','#2563EB'];
-    // Area/Line chart for KG por mes
   const svgW=500, svgH=120, pad=30;
   const maxKgS=Math.max(...kgM,1);
   const pts=kgM.map((v,i)=>{
@@ -741,10 +743,8 @@ async function loadDash(){
   const areaPath=linePath+' L'+pts[11].x+','+(svgH-pad)+' L'+pts[0].x+','+(svgH-pad)+' Z';
   let circles=pts.map((p,i)=>p.v>0?'<circle cx="'+p.x+'" cy="'+p.y+'" r="4" fill="#10B981" stroke="#fff" stroke-width="2"/><text x="'+p.x+'" y="'+(parseFloat(p.y)-8)+'" text-anchor="middle" font-size="9" fill="#374151">'+fmtN(p.v)+'</text>':'').join('');
   let labels=pts.map((p,i)=>'<text x="'+p.x+'" y="'+(svgH-10)+'" text-anchor="middle" font-size="9" fill="#6B7280">'+MSL[i+1]+'</text>').join('');
-  // baseline
   const baseline='<line x1="'+pad+'" y1="'+(svgH-pad)+'" x2="'+(svgW-pad)+'" y2="'+(svgH-pad)+'" stroke="#E5E7EB" stroke-width="1"/>';
   document.getElementById('d-bar-kg').innerHTML='<svg width="100%" viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="xMidYMid meet">'+baseline+'<path d="'+areaPath+'" fill="rgba(16,185,129,0.15)"/><path d="'+linePath+'" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linejoin="round"/>'+(circles+labels)+'</svg>';
-
   document.getElementById('d-bar-c').innerHTML=cM.map((v,i)=>
     '<div class="bc"><div class="bv">'+( v>0?'$'+fmtM0(v/1000)+'k':'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxC*120),v>0?4:0)+'px;background:'+CC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
   const matRows=Object.entries(byMat).sort((a,b)=>b[1].kg-a[1].kg);
@@ -757,20 +757,18 @@ async function loadDash(){
     '<div class="hbar-row"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM(v.c)+'</div></div>').join('');
   const ctaRows=Object.entries(byCta).sort((a,b)=>b[1].kg-a[1].kg);
   const maxCtaKg=ctaRows.length?ctaRows[0][1].kg:1;
-    // Purga por Cuenta — PIE CHART SVG
   const PIE = ['#2563EB','#DC2626','#D97706','#7C3AED','#059669','#0891B2'];
   const totalCtaKg2 = ctaRows.reduce((s,[,v])=>s+v.kg,0);
   let startA = -Math.PI/2, slices='';
   ctaRows.forEach(([c,v],i)=>{
     const pct=v.kg/totalCtaKg2, angle=pct*2*Math.PI;
-    const r1=85, r2=45; // outer/inner radius for donut
+    const r1=85, r2=45;
     const x1=100+r1*Math.cos(startA), y1=100+r1*Math.sin(startA);
     const x2=100+r1*Math.cos(startA+angle), y2=100+r1*Math.sin(startA+angle);
     const ix1=100+r2*Math.cos(startA+angle), iy1=100+r2*Math.sin(startA+angle);
     const ix2=100+r2*Math.cos(startA), iy2=100+r2*Math.sin(startA);
     const large=angle>Math.PI?1:0;
     slices+='<path d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r1+','+r1+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' L'+ix1.toFixed(1)+','+iy1.toFixed(1)+' A'+r2+','+r2+' 0 '+large+',0 '+ix2.toFixed(1)+','+iy2.toFixed(1)+' Z" fill="'+PIE[i%PIE.length]+'" stroke="#fff" stroke-width="2"/>';
-    // Label in middle of slice
     const midA=startA+angle/2, lx=100+(r1+r2)/2*Math.cos(midA), ly=100+(r1+r2)/2*Math.sin(midA);
     if(pct>0.05) slices+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">'+( pct*100).toFixed(0)+'%</text>';
     startA+=angle;
@@ -932,25 +930,170 @@ async function eliminarFila(i,dbId){
   buildIngresoTableRow(i);
   loadRecientes();
 }
-async function limpiarIngreso(){
+
+// ════════════════════════════════════════════════════════
+// ✅ FIX: LIMPIAR VISTA — Solo resetea la tabla en pantalla,
+//    NO elimina ningún registro de la base de datos
+// ════════════════════════════════════════════════════════
+function limpiarIngreso(){
   if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede limpiar','err');return;}
-  // Delete all saved rows from DB first
-  const toDelete = rowState.filter(r=>r.mode==='saved'&&r.dbId).map(r=>r.dbId);
-  if(toDelete.length>0 && sb){
-    if(!confirm('Limpiar eliminará '+toDelete.length+' registro(s) guardado(s). ¿Continuar?')) return;
-    for(const id of toDelete){
-      await sb.from('purgas').delete().eq('id',id);
-    }
-  }
-  // Reset all rows
+  // Reset UI state only — no DB operations
   FILAS_ING.forEach((_,i)=>{
     rowState[i]={mode:'input',dbId:null};
   });
-  // Rebuild entire table fresh
   buildIngresoTable();
-  loadRecientes();
-  showAlert('ing','↺ Tabla limpiada','ok');
+  showAlert('ing','↺ Vista limpiada — los registros guardados en BD se conservan','ok');
 }
+
+// ════════════════════════════════════════════════════════
+// ✅ NUEVO: IMPRIMIR INGRESO
+// ════════════════════════════════════════════════════════
+function imprimirIngreso(){
+  const mesEl = document.getElementById('ing-mes');
+  const mesNombre = mesEl ? mesEl.options[mesEl.selectedIndex].text : '';
+  const fecha = document.getElementById('ing-fecha').value || '';
+
+  // Recolectar datos de cada fila (guardadas y pendientes)
+  const rows = [];
+  FILAS_ING.forEach((f, i) => {
+    const estado = rowState[i];
+    let celdas = {};
+
+    if (estado.mode === 'saved') {
+      // Leer desde los spans en modo solo-lectura
+      const tr = document.querySelector('#ing-body tr[data-row="'+i+'"]');
+      const spans = tr ? tr.querySelectorAll('.td-ro') : [];
+      const get = (idx) => spans[idx] ? spans[idx].textContent.trim() : '—';
+      celdas = {
+        cuenta: f.cuenta, maquina: f.maquina,
+        fecha: get(0), kg: get(1), color: get(2),
+        psf: get(3), kgsf: get(4), pmlos: get(5),
+        kgpan: get(6), medida: get(7), altura: get(8),
+        slot: get(9), of: get(11), sku: get(14),
+        mpDesc: get(15), estado: '✓ Guardado'
+      };
+    } else {
+      // Leer desde los inputs
+      const gv = (id) => { const el = document.getElementById('r'+i+'-'+id); return el ? (el.value.trim()||'—') : '—'; };
+      celdas = {
+        cuenta: f.cuenta, maquina: f.maquina,
+        fecha: gv('fecha'), kg: gv('kg'), color: gv('color'),
+        psf: gv('psf'), kgsf: gv('kgsf'), pmlos: gv('pmlos'),
+        kgpan: gv('kgpan'), medida: gv('medida'),
+        altura: (()=>{ const el=document.getElementById('r'+i+'-altura'); return el&&el.value?el.value:'—'; })(),
+        slot: gv('slot'), of: gv('of'),
+        sku: (()=>{ const el=document.getElementById('r'+i+'-sku'); return el&&el.value?el.value:'—'; })(),
+        mpDesc: (()=>{ const el=document.getElementById('r'+i+'-mpdesc'); return el?el.textContent.trim():'—'; })(),
+        estado: 'Pendiente'
+      };
+    }
+    rows.push(celdas);
+  });
+
+  const totKg = rows.reduce((s,r) => s + (parseFloat(r.kg)||0), 0);
+  const totalColor = rows.reduce((s,r) => s + (parseFloat(r.color)||0), 0);
+  const totalPsf = rows.reduce((s,r) => s + (parseFloat(r.psf)||0), 0);
+  const totalPmlos = rows.reduce((s,r) => s + (parseFloat(r.pmlos)||0), 0);
+
+  const w = window.open('', '_blank', 'width=1100,height=750');
+  w.document.write(`<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<title>Ingreso Purga — ${mesNombre} ${fecha}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:22px 26px;background:#fff;}
+  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
+  .header h1{font-size:17px;font-weight:700;color:#1E3A2F;margin-bottom:3px;}
+  .header p{font-size:11px;color:#666;}
+  .meta{text-align:right;font-size:11px;color:#555;}
+  .meta strong{color:#1E3A2F;}
+  table{width:100%;border-collapse:collapse;font-size:10px;}
+  thead th{background:#1E3A2F;color:#fff;padding:7px 5px;text-align:left;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.12);}
+  thead th.tc{text-align:center;}
+  thead th.tr{text-align:right;}
+  tbody tr{border-bottom:1px solid #e5e7eb;}
+  tbody tr:nth-child(even) td{background:#f9fafb;}
+  td{padding:6px 5px;vertical-align:middle;}
+  td.tc{text-align:center;}
+  td.tr{text-align:right;}
+  .saved{color:#15803D;font-weight:700;}
+  .pending{color:#B45309;font-style:italic;}
+  .total-row td{background:#D1FAE5!important;font-weight:700;color:#166534;border-top:2px solid #6EE7B7;font-size:10.5px;}
+  .btn-print{display:inline-block;margin-bottom:14px;padding:7px 20px;background:#1E3A2F;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:Arial;}
+  .footer{margin-top:14px;font-size:9.5px;color:#aaa;border-top:1px solid #e5e7eb;padding-top:8px;}
+  @media print{
+    .btn-print{display:none;}
+    body{padding:10px 14px;}
+    @page{margin:15mm;}
+  }
+</style>
+</head><body>
+<div class="header">
+  <div>
+    <h1>🌿 Sistema Purga — Ingreso de Purga</h1>
+    <p>LB Logística · 2026</p>
+  </div>
+  <div class="meta">
+    <p>Mes: <strong>${mesNombre}</strong></p>
+    <p>Fecha: <strong>${fecha}</strong></p>
+    <p>Impreso: <strong>${new Date().toLocaleString('es-CL')}</strong></p>
+  </div>
+</div>
+<button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+<table>
+<thead><tr>
+  <th style="min-width:60px">CUENTA</th>
+  <th style="min-width:80px">MÁQUINA</th>
+  <th class="tc" style="min-width:75px">FECHA</th>
+  <th class="tr" style="min-width:52px">KG PURGA</th>
+  <th class="tr" style="min-width:48px">P.COLOR</th>
+  <th class="tr" style="min-width:52px">PAN S/FRAME</th>
+  <th class="tr" style="min-width:52px">KG PAN S/F</th>
+  <th class="tr" style="min-width:48px">PAN MALOS</th>
+  <th class="tr" style="min-width:48px">KG PANEL</th>
+  <th class="tc" style="min-width:55px">MEDIDA</th>
+  <th class="tc" style="min-width:40px">ALTURA</th>
+  <th class="tc" style="min-width:38px">SLOT</th>
+  <th class="tc" style="min-width:38px">OF</th>
+  <th class="tc" style="min-width:55px">MP SKU</th>
+  <th style="min-width:130px">MP DESCRIPCIÓN</th>
+  <th class="tc" style="min-width:65px">ESTADO</th>
+</tr></thead>
+<tbody>
+${rows.map(r=>`<tr>
+  <td><strong>${r.cuenta}</strong></td>
+  <td>${r.maquina}</td>
+  <td class="tc">${r.fecha}</td>
+  <td class="tr">${r.kg==='—'?'—':parseFloat(r.kg).toFixed(1)}</td>
+  <td class="tr">${r.color==='—'?'—':parseFloat(r.color).toFixed(1)}</td>
+  <td class="tr">${r.psf==='—'?'—':parseFloat(r.psf).toFixed(1)}</td>
+  <td class="tr">${r.kgsf==='—'?'—':parseFloat(r.kgsf).toFixed(1)}</td>
+  <td class="tr">${r.pmlos==='—'?'—':parseFloat(r.pmlos).toFixed(1)}</td>
+  <td class="tr">${r.kgpan==='—'?'—':parseFloat(r.kgpan).toFixed(1)}</td>
+  <td class="tc">${r.medida}</td>
+  <td class="tc">${r.altura}</td>
+  <td class="tc">${r.slot}</td>
+  <td class="tc">${r.of}</td>
+  <td class="tc">${r.sku}</td>
+  <td style="font-size:9.5px;color:#555">${r.mpDesc}</td>
+  <td class="tc ${r.estado.includes('Guardado')?'saved':'pending'}">${r.estado}</td>
+</tr>`).join('')}
+<tr class="total-row">
+  <td colspan="3"><strong>TOTALES</strong></td>
+  <td class="tr"><strong>${totKg>0?totKg.toFixed(1):'—'}</strong></td>
+  <td class="tr"><strong>${totalColor>0?totalColor.toFixed(1):'—'}</strong></td>
+  <td class="tr"><strong>${totalPsf>0?totalPsf.toFixed(1):'—'}</strong></td>
+  <td class="tr">—</td>
+  <td class="tr"><strong>${totalPmlos>0?totalPmlos.toFixed(1):'—'}</strong></td>
+  <td colspan="8"></td>
+</tr>
+</tbody></table>
+<div class="footer">LB Logística · Sistema Purga 2026 · Generado: ${new Date().toLocaleString('es-CL')}</div>
+</body></html>`);
+  w.document.close();
+}
+
 function parseFecha(val){
   if(!val) return null;
   const s=String(val).trim();
