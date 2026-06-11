@@ -270,6 +270,9 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <span class="role-tag" id="u-role">—</span>
         <span class="logout-btn" id="logout-btn">Salir</span>
       </div>
+      <div style="padding:5px 8px 2px">
+        <button onclick="document.getElementById('bg-modal').classList.add('open')" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;justify-content:center;">🎨 Personalizar fondo</button>
+      </div>
     </div>
   </aside>
 
@@ -441,17 +444,25 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
 
     <!-- PANELES -->
     <div id="mod-paneles" class="module">
-      <div class="page-hdr"><div><h2>Paneles Malos 2026</h2><p>Desde Ingreso de Purga</p></div></div>
+      <div class="page-hdr"><div><h2>Paneles Malos 2026</h2><p>Análisis completo por SKU, cuenta y máquina</p></div></div>
       <div class="toolbar">
         <div class="cg"><label>Año</label><select id="pan-anio" onchange="loadPaneles()"><option value="2026">2026</option><option value="2025">2025</option></select></div>
         <div class="vd"></div>
         <button class="btn btn-p btn-sm" onclick="loadPaneles()">↻</button>
         <button class="btn btn-g btn-sm" onclick="exportPanTodo()">⬇ Todo en Excel</button>
       </div>
-      <div class="section"><div class="sec-hdr"><div class="sec-title">📋 Paneles Malos<span class="sec-sub">cantidad por SKU y mes</span></div><button class="btn btn-g btn-sm" onclick="exportPanT1()">⬇ Excel</button></div>
-        <div class="card tbl-wrap"><table class="t1" id="pan-t1"><thead><tr class="t1-title"><th colspan="15">PANELES MALOS 2026</th></tr><tr class="t1-cols"><th class="left" style="min-width:68px">SKU</th><th class="left" style="min-width:175px">DESCRIPCION</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th style="background:#2D6A4F">TOTAL</th></tr></thead><tbody id="pan-t1-body"><tr><td colspan="15"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
-      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Paneles<span class="sec-sub">paneles malos × costo unitario</span></div><button class="btn btn-g btn-sm" onclick="exportPanT2()">⬇ Excel</button></div>
-        <div class="card tbl-wrap"><table class="t2" id="pan-t2"><thead><tr class="t2-title"><th colspan="15">COSTO PANELES</th></tr><tr class="t2-cols"><th class="left" style="min-width:175px">DESCRIPCION</th><th>ENE</th><th>FEB</th><th>MAR</th><th>ABR</th><th>MAY</th><th>JUN</th><th>JUL</th><th>AGO</th><th>SEP</th><th>OCT</th><th>NOV</th><th>DIC</th><th style="background:#2a3f6a">TOTAL</th><th style="background:#374151;min-width:58px">MOM%</th></tr></thead><tbody id="pan-t2-body"><tr><td colspan="15"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">📋 Paneles Malos por SKU<span class="sec-sub">cantidad</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p1')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="pan-t1"><thead><tr class="t1-title"><th colspan="16">PANELES MALOS 2026 — POR SKU</th></tr><tr class="t1-cols" id="pan-t1-cols"></tr></thead><tbody id="pan-t1-body"><tr><td colspan="16"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Paneles por SKU<span class="sec-sub">costo unitario × cantidad</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p2')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="pan-t2"><thead><tr class="t2-title"><th colspan="16">COSTO PANELES MALOS — POR SKU</th></tr><tr class="t2-cols" id="pan-t2-cols"></tr></thead><tbody id="pan-t2-body"><tr><td colspan="16"><div class="loading"><div class="spinner"></div></div></td></tr></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">🏢 Paneles Malos por Cuenta<span class="sec-sub">cantidad</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p3')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="pan-t3"><thead><tr class="t1-title" style="background:#0F766E"><th colspan="15">PANELES MALOS — POR CUENTA</th></tr><tr class="t1-cols" style="background:#0D5F59" id="pan-t3-cols"></tr></thead><tbody id="pan-t3-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Paneles por Cuenta<span class="sec-sub">costo</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p4')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="pan-t4"><thead><tr class="t2-title"><th colspan="15">COSTO PANELES — POR CUENTA</th></tr><tr class="t2-cols" id="pan-t4-cols"></tr></thead><tbody id="pan-t4-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">⚙ Paneles Malos por Máquina<span class="sec-sub">cantidad</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p5')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t1" id="pan-t5"><thead><tr class="t1-title" style="background:#374151"><th colspan="15">PANELES MALOS — POR MÁQUINA</th></tr><tr class="t1-cols" style="background:#1F2937" id="pan-t5-cols"></tr></thead><tbody id="pan-t5-body"></tbody></table></div></div>
+      <div class="section"><div class="sec-hdr"><div class="sec-title">💰 Costo Paneles por Máquina<span class="sec-sub">costo</span></div><button class="btn btn-g btn-sm" onclick="exportPanSheet('p6')">⬇ Excel</button></div>
+        <div class="card tbl-wrap"><table class="t2" id="pan-t6"><thead><tr class="t2-title" style="background:#374151"><th colspan="15">COSTO PANELES — POR MÁQUINA</th></tr><tr class="t2-cols" style="background:#1F2937" id="pan-t6-cols"></tr></thead><tbody id="pan-t6-body"></tbody></table></div></div>
     </div>
 
     <!-- DATA -->
@@ -953,143 +964,406 @@ function imprimirIngreso(){
   const mesNombre = mesEl ? mesEl.options[mesEl.selectedIndex].text : '';
   const fecha = document.getElementById('ing-fecha').value || '';
 
-  // Recolectar datos de cada fila (guardadas y pendientes)
   const rows = [];
   FILAS_ING.forEach((f, i) => {
     const estado = rowState[i];
     let celdas = {};
-
     if (estado.mode === 'saved') {
-      // Leer desde los spans en modo solo-lectura
       const tr = document.querySelector('#ing-body tr[data-row="'+i+'"]');
       const spans = tr ? tr.querySelectorAll('.td-ro') : [];
       const get = (idx) => spans[idx] ? spans[idx].textContent.trim() : '—';
       celdas = {
-        cuenta: f.cuenta, maquina: f.maquina,
-        fecha: get(0), kg: get(1), color: get(2),
-        psf: get(3), kgsf: get(4), pmlos: get(5),
-        kgpan: get(6), medida: get(7), altura: get(8),
-        slot: get(9), of: get(11), sku: get(14),
-        mpDesc: get(15), estado: '✓ Guardado'
+        cuenta:f.cuenta,maquina:f.maquina,
+        fecha:get(0),kg:get(1),color:get(2),psf:get(3),kgsf:get(4),
+        pmlos:get(5),kgpan:get(6),medida:get(7),altura:get(8),
+        slot:get(9),of:get(11),sku:get(14),mpDesc:get(15),estado:'✓ Guardado'
       };
     } else {
-      // Leer desde los inputs
-      const gv = (id) => { const el = document.getElementById('r'+i+'-'+id); return el ? (el.value.trim()||'—') : '—'; };
+      const gv=(id)=>{const el=document.getElementById('r'+i+'-'+id);return el?(el.value.trim()||'—'):'—';};
       celdas = {
-        cuenta: f.cuenta, maquina: f.maquina,
-        fecha: gv('fecha'), kg: gv('kg'), color: gv('color'),
-        psf: gv('psf'), kgsf: gv('kgsf'), pmlos: gv('pmlos'),
-        kgpan: gv('kgpan'), medida: gv('medida'),
-        altura: (()=>{ const el=document.getElementById('r'+i+'-altura'); return el&&el.value?el.value:'—'; })(),
-        slot: gv('slot'), of: gv('of'),
-        sku: (()=>{ const el=document.getElementById('r'+i+'-sku'); return el&&el.value?el.value:'—'; })(),
-        mpDesc: (()=>{ const el=document.getElementById('r'+i+'-mpdesc'); return el?el.textContent.trim():'—'; })(),
-        estado: 'Pendiente'
+        cuenta:f.cuenta,maquina:f.maquina,
+        fecha:gv('fecha'),kg:gv('kg'),color:gv('color'),psf:gv('psf'),kgsf:gv('kgsf'),
+        pmlos:gv('pmlos'),kgpan:gv('kgpan'),medida:gv('medida'),
+        altura:(()=>{const el=document.getElementById('r'+i+'-altura');return el&&el.value?el.value:'—';})(),
+        slot:gv('slot'),of:gv('of'),
+        sku:(()=>{const el=document.getElementById('r'+i+'-sku');return el&&el.value?el.value:'—';})(),
+        mpDesc:(()=>{const el=document.getElementById('r'+i+'-mpdesc');return el?el.textContent.trim():'—';})(),
+        estado:'Pendiente'
       };
     }
     rows.push(celdas);
   });
 
-  const totKg = rows.reduce((s,r) => s + (parseFloat(r.kg)||0), 0);
-  const totalColor = rows.reduce((s,r) => s + (parseFloat(r.color)||0), 0);
-  const totalPsf = rows.reduce((s,r) => s + (parseFloat(r.psf)||0), 0);
-  const totalPmlos = rows.reduce((s,r) => s + (parseFloat(r.pmlos)||0), 0);
+  const totKg    = rows.reduce((s,r)=>s+(parseFloat(r.kg)||0),0);
+  const totColor = rows.reduce((s,r)=>s+(parseFloat(r.color)||0),0);
+  const totPsf   = rows.reduce((s,r)=>s+(parseFloat(r.psf)||0),0);
+  const totPmlos = rows.reduce((s,r)=>s+(parseFloat(r.pmlos)||0),0);
+  const totKgsf  = rows.reduce((s,r)=>s+(parseFloat(r.kgsf)||0),0);
+  const totKgpan = rows.reduce((s,r)=>s+(parseFloat(r.kgpan)||0),0);
 
-  const w = window.open('', '_blank', 'width=1100,height=750');
+  const fmt = (v) => (parseFloat(v)||0)>0 ? (parseFloat(v)).toFixed(1) : '—';
+
+  // Colores de cuenta para la columna izquierda
+  const ctaColor = {
+    'IMPU':'#166534','IMPU PIN':'#1D4ED8','HCPU':'#7C3AED','IMR':'#B45309','CMR':'#DC2626'
+  };
+  const ctaBg = {
+    'IMPU':'#DCFCE7','IMPU PIN':'#DBEAFE','HCPU':'#EDE9FE','IMR':'#FEF3C7','CMR':'#FEE2E2'
+  };
+
+  const rowsHtml = rows.map((r,idx) => {
+    const even = idx%2===0;
+    const rowBg = even ? '#ffffff' : '#F9FAFB';
+    const cc = ctaColor[r.cuenta]||'#374151';
+    const cb = ctaBg[r.cuenta]||'#F3F4F6';
+    const saved = r.estado.includes('Guardado');
+    return `<tr style="background:${rowBg}">
+  <td style="background:${cb};color:${cc};font-weight:700;border:1px solid #d1d5db;padding:6px 7px;white-space:nowrap">${r.cuenta}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;font-weight:600;color:#1F2937">${r.maquina}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.fecha}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:${(parseFloat(r.kg)||0)>0?'700':'400'};color:${(parseFloat(r.kg)||0)>0?'#166534':'#9CA3AF'}">${fmt(r.kg)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.color)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.color)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.psf)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.psf)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.kgsf)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.kgsf)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:${(parseFloat(r.pmlos)||0)>0?'700':'400'};color:${(parseFloat(r.pmlos)||0)>0?'#DC2626':'#9CA3AF'}">${fmt(r.pmlos)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.kgpan)||0)>0?'#92400E':'#9CA3AF'}">${fmt(r.kgpan)}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.medida}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.altura}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.slot}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.of}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-size:9px;background:#F0F9FF;color:#1D4ED8;font-weight:600">${r.sku}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;font-size:9px;color:#6B7280;max-width:130px">${r.mpDesc}</td>
+  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-weight:700;color:${saved?'#166534':'#B45309'};font-size:9.5px">${r.estado}</td>
+</tr>`;
+  }).join('');
+
+  const w = window.open('','_blank','width=1200,height=820');
   w.document.write(`<!DOCTYPE html>
 <html lang="es"><head>
 <meta charset="UTF-8">
 <title>Ingreso Purga — ${mesNombre} ${fecha}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:22px 26px;background:#fff;}
-  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
-  .header h1{font-size:17px;font-weight:700;color:#1E3A2F;margin-bottom:3px;}
-  .header p{font-size:11px;color:#666;}
-  .meta{text-align:right;font-size:11px;color:#555;}
-  .meta strong{color:#1E3A2F;}
-  table{width:100%;border-collapse:collapse;font-size:10px;}
-  thead th{background:#1E3A2F;color:#fff;padding:7px 5px;text-align:left;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.12);}
-  thead th.tc{text-align:center;}
-  thead th.tr{text-align:right;}
-  tbody tr{border-bottom:1px solid #e5e7eb;}
-  tbody tr:nth-child(even) td{background:#f9fafb;}
-  td{padding:6px 5px;vertical-align:middle;}
-  td.tc{text-align:center;}
-  td.tr{text-align:right;}
-  .saved{color:#15803D;font-weight:700;}
-  .pending{color:#B45309;font-style:italic;}
-  .total-row td{background:#D1FAE5!important;font-weight:700;color:#166534;border-top:2px solid #6EE7B7;font-size:10.5px;}
-  .btn-print{display:inline-block;margin-bottom:14px;padding:7px 20px;background:#1E3A2F;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-family:Arial;}
-  .footer{margin-top:14px;font-size:9.5px;color:#aaa;border-top:1px solid #e5e7eb;padding-top:8px;}
+  body{font-family:Arial,sans-serif;font-size:11px;color:#111;background:#fff;}
+  .page{padding:20px 24px;}
+  /* HEADER */
+  .doc-header{display:flex;align-items:stretch;margin-bottom:14px;border:2px solid #1E3A2F;border-radius:6px;overflow:hidden;}
+  .doc-header-logo{background:#1E3A2F;color:#fff;padding:12px 18px;display:flex;flex-direction:column;justify-content:center;min-width:220px;}
+  .doc-header-logo h1{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .doc-header-logo p{font-size:10px;opacity:.7;}
+  .doc-header-meta{flex:1;padding:10px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-items:center;background:#F0FDF4;}
+  .meta-item{display:flex;flex-direction:column;gap:1px;}
+  .meta-label{font-size:8.5px;text-transform:uppercase;letter-spacing:.05em;color:#6B7280;font-weight:600;}
+  .meta-value{font-size:12px;font-weight:700;color:#1E3A2F;}
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;font-size:9.5px;}
+  .thead-top th{padding:6px 7px;font-size:10px;font-weight:700;letter-spacing:.04em;border:1px solid rgba(255,255,255,0.15);text-align:center;}
+  .th-ing{background:#1E3A2F;color:#fff;}
+  .th-cost{background:#1e3352;color:#fff;}
+  .th-cols th{background:#2D4A3E;color:#e5f5ec;padding:6px 5px;font-size:9px;font-weight:600;text-align:center;border:1px solid rgba(255,255,255,0.12);white-space:nowrap;}
+  .total-row td{background:#D1FAE5!important;font-weight:700;color:#166534;border:1px solid #6EE7B7;font-size:10px;padding:7px;}
+  /* FIRMAS */
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:32px;padding-top:0;}
+  .firma-box{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .firma-line{width:100%;border-bottom:1.5px solid #374151;margin-bottom:4px;}
+  .firma-label{font-size:10px;font-weight:700;color:#1E3A2F;text-transform:uppercase;letter-spacing:.05em;}
+  .firma-sub{font-size:9px;color:#6B7280;}
+  .firma-rut{font-size:9px;color:#9CA3AF;margin-top:2px;}
+  /* FOOTER */
+  .doc-footer{margin-top:16px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8.5px;color:#9CA3AF;display:flex;justify-content:space-between;}
+  /* NO-PRINT */
+  .no-print-bar{background:#1E3A2F;padding:10px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99;}
+  .no-print-bar h2{color:#fff;font-size:13px;font-weight:600;flex:1;}
+  .btn-pdf{padding:8px 20px;background:#16A34A;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;font-family:Arial;}
+  .btn-pdf:hover{background:#15803D;}
   @media print{
-    .btn-print{display:none;}
-    body{padding:10px 14px;}
-    @page{margin:15mm;}
+    .no-print-bar{display:none!important;}
+    body{padding:0;}
+    .page{padding:12px 16px;}
+    @page{size:A4 landscape;margin:12mm;}
+    table{font-size:8.5px;}
+    .doc-header-logo h1{font-size:12px;}
   }
+  /* Forzar colores en impresión */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 </style>
 </head><body>
-<div class="header">
-  <div>
-    <h1>🌿 Sistema Purga — Ingreso de Purga</h1>
+
+<!-- Barra superior (solo pantalla) -->
+<div class="no-print-bar">
+  <h2>🌿 Vista previa — Ingreso de Purga · ${mesNombre} ${fecha}</h2>
+  <button class="btn-pdf" onclick="window.print()">🖨&nbsp; Imprimir / Guardar PDF</button>
+</div>
+
+<div class="page">
+
+<!-- Encabezado del documento -->
+<div class="doc-header">
+  <div class="doc-header-logo">
+    <h1>🌿 Sistema Purga</h1>
     <p>LB Logística · 2026</p>
   </div>
-  <div class="meta">
-    <p>Mes: <strong>${mesNombre}</strong></p>
-    <p>Fecha: <strong>${fecha}</strong></p>
-    <p>Impreso: <strong>${new Date().toLocaleString('es-CL')}</strong></p>
+  <div class="doc-header-meta">
+    <div class="meta-item">
+      <span class="meta-label">Documento</span>
+      <span class="meta-value">Ingreso de Purga</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Mes</span>
+      <span class="meta-value">${mesNombre.toUpperCase()}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Fecha</span>
+      <span class="meta-value">${fecha}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Generado</span>
+      <span class="meta-value" style="font-size:10px">${new Date().toLocaleString('es-CL')}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Total Kg Purga</span>
+      <span class="meta-value" style="color:#166534">${totKg>0?totKg.toFixed(1)+' kg':'—'}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Pan Malos</span>
+      <span class="meta-value" style="color:#DC2626">${totPmlos>0?totPmlos.toFixed(1)+' un':'—'}</span>
+    </div>
   </div>
 </div>
-<button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar PDF</button>
+
+<!-- Tabla principal -->
 <table>
-<thead><tr>
-  <th style="min-width:60px">CUENTA</th>
-  <th style="min-width:80px">MÁQUINA</th>
-  <th class="tc" style="min-width:75px">FECHA</th>
-  <th class="tr" style="min-width:52px">KG PURGA</th>
-  <th class="tr" style="min-width:48px">P.COLOR</th>
-  <th class="tr" style="min-width:52px">PAN S/FRAME</th>
-  <th class="tr" style="min-width:52px">KG PAN S/F</th>
-  <th class="tr" style="min-width:48px">PAN MALOS</th>
-  <th class="tr" style="min-width:48px">KG PANEL</th>
-  <th class="tc" style="min-width:55px">MEDIDA</th>
-  <th class="tc" style="min-width:40px">ALTURA</th>
-  <th class="tc" style="min-width:38px">SLOT</th>
-  <th class="tc" style="min-width:38px">OF</th>
-  <th class="tc" style="min-width:55px">MP SKU</th>
-  <th style="min-width:130px">MP DESCRIPCIÓN</th>
-  <th class="tc" style="min-width:65px">ESTADO</th>
-</tr></thead>
+<thead>
+  <tr class="thead-top">
+    <th colspan="9" class="th-ing">📋 DATOS DE INGRESO DE PURGA</th>
+    <th colspan="4" class="th-cost">📐 DETALLES PANEL</th>
+    <th colspan="2" class="th-ing" style="background:#2D6A4F">🏷 MATERIAL</th>
+    <th class="th-cost">✓</th>
+  </tr>
+  <tr class="th-cols">
+    <th style="text-align:left;min-width:58px">CUENTA</th>
+    <th style="text-align:left;min-width:75px">MÁQUINA</th>
+    <th style="min-width:70px">FECHA</th>
+    <th style="min-width:55px">KG PURGA</th>
+    <th style="min-width:48px">P.COLOR</th>
+    <th style="min-width:52px">PAN S/F</th>
+    <th style="min-width:52px">KG PAN S/F</th>
+    <th style="min-width:50px">PAN MALOS</th>
+    <th style="min-width:50px">KG PANEL</th>
+    <th style="min-width:52px">MEDIDA</th>
+    <th style="min-width:42px">ALTURA</th>
+    <th style="min-width:36px">SLOT</th>
+    <th style="min-width:36px">OF</th>
+    <th style="min-width:52px">MP SKU</th>
+    <th style="text-align:left;min-width:110px">MP DESCRIPCIÓN</th>
+    <th style="min-width:58px">ESTADO</th>
+  </tr>
+</thead>
 <tbody>
-${rows.map(r=>`<tr>
-  <td><strong>${r.cuenta}</strong></td>
-  <td>${r.maquina}</td>
-  <td class="tc">${r.fecha}</td>
-  <td class="tr">${r.kg==='—'?'—':parseFloat(r.kg).toFixed(1)}</td>
-  <td class="tr">${r.color==='—'?'—':parseFloat(r.color).toFixed(1)}</td>
-  <td class="tr">${r.psf==='—'?'—':parseFloat(r.psf).toFixed(1)}</td>
-  <td class="tr">${r.kgsf==='—'?'—':parseFloat(r.kgsf).toFixed(1)}</td>
-  <td class="tr">${r.pmlos==='—'?'—':parseFloat(r.pmlos).toFixed(1)}</td>
-  <td class="tr">${r.kgpan==='—'?'—':parseFloat(r.kgpan).toFixed(1)}</td>
-  <td class="tc">${r.medida}</td>
-  <td class="tc">${r.altura}</td>
-  <td class="tc">${r.slot}</td>
-  <td class="tc">${r.of}</td>
-  <td class="tc">${r.sku}</td>
-  <td style="font-size:9.5px;color:#555">${r.mpDesc}</td>
-  <td class="tc ${r.estado.includes('Guardado')?'saved':'pending'}">${r.estado}</td>
-</tr>`).join('')}
+${rowsHtml}
 <tr class="total-row">
-  <td colspan="3"><strong>TOTALES</strong></td>
-  <td class="tr"><strong>${totKg>0?totKg.toFixed(1):'—'}</strong></td>
-  <td class="tr"><strong>${totalColor>0?totalColor.toFixed(1):'—'}</strong></td>
-  <td class="tr"><strong>${totalPsf>0?totalPsf.toFixed(1):'—'}</strong></td>
-  <td class="tr">—</td>
-  <td class="tr"><strong>${totalPmlos>0?totalPmlos.toFixed(1):'—'}</strong></td>
-  <td colspan="8"></td>
+  <td colspan="3" style="text-align:left;padding-left:10px;border:1px solid #6EE7B7">▶ TOTALES</td>
+  <td style="text-align:right;border:1px solid #6EE7B7">${totKg>0?totKg.toFixed(1):'—'}</td>
+  <td style="text-align:right;border:1px solid #6EE7B7">${totColor>0?totColor.toFixed(1):'—'}</td>
+  <td style="text-align:right;border:1px solid #6EE7B7">${totPsf>0?totPsf.toFixed(1):'—'}</td>
+  <td style="text-align:right;border:1px solid #6EE7B7">${totKgsf>0?totKgsf.toFixed(1):'—'}</td>
+  <td style="text-align:right;border:1px solid #6EE7B7;color:#DC2626">${totPmlos>0?totPmlos.toFixed(1):'—'}</td>
+  <td style="text-align:right;border:1px solid #6EE7B7">${totKgpan>0?totKgpan.toFixed(1):'—'}</td>
+  <td colspan="7" style="border:1px solid #6EE7B7"></td>
 </tr>
-</tbody></table>
-<div class="footer">LB Logística · Sistema Purga 2026 · Generado: ${new Date().toLocaleString('es-CL')}</div>
+</tbody>
+</table>
+
+<!-- FIRMAS -->
+<div class="firmas">
+  <div class="firma-box">
+    <div style="height:52px"></div>
+    <div class="firma-line"></div>
+    <div class="firma-label">Supervisor de Turno</div>
+    <div class="firma-sub">Nombre: ________________________________</div>
+    <div class="firma-rut">RUT: ___________________ &nbsp;&nbsp; Fecha: ___________</div>
+  </div>
+  <div class="firma-box">
+    <div style="height:52px"></div>
+    <div class="firma-line"></div>
+    <div class="firma-label">Encargado de Toma de Purga</div>
+    <div class="firma-sub">Nombre: ________________________________</div>
+    <div class="firma-rut">RUT: ___________________ &nbsp;&nbsp; Fecha: ___________</div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="doc-footer">
+  <span>LB Logística · Sistema Purga 2026</span>
+  <span>Generado: ${new Date().toLocaleString('es-CL')}</span>
+</div>
+
+</div><!-- /page -->
+<script>
+  // Auto-abrir diálogo de impresión/PDF al cargar
+  window.addEventListener('load', function(){
+    setTimeout(function(){ window.print(); }, 600);
+  });
+<\/script>
+
+<!-- MODAL FONDO -->
+<div class="modal-bg" id="bg-modal" style="z-index:600">
+  <div class="modal" style="width:480px">
+    <div class="modal-hdr"><h3>🎨 Personalizar Fondo</h3><button class="modal-close" onclick="document.getElementById('bg-modal').classList.remove('open')">✕</button></div>
+    <div class="modal-body" style="padding:20px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Personaliza el fondo del área de módulos (no afecta el sidebar).</p>
+      <!-- Color sólido -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🎨 Color sólido</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="bg-presets">
+          <div class="bg-swatch" data-v="#F0F2F5" style="background:#F0F2F5" title="Gris claro (default)"></div>
+          <div class="bg-swatch" data-v="#EFF6FF" style="background:#EFF6FF" title="Azul suave"></div>
+          <div class="bg-swatch" data-v="#F0FDF4" style="background:#F0FDF4" title="Verde suave"></div>
+          <div class="bg-swatch" data-v="#FEF9C3" style="background:#FEF9C3" title="Amarillo suave"></div>
+          <div class="bg-swatch" data-v="#FDF4FF" style="background:#FDF4FF" title="Violeta suave"></div>
+          <div class="bg-swatch" data-v="#FFF7ED" style="background:#FFF7ED" title="Naranja suave"></div>
+          <div class="bg-swatch" data-v="#1E293B" style="background:#1E293B" title="Oscuro"></div>
+          <div class="bg-swatch" data-v="#0F172A" style="background:#0F172A" title="Noche"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;color:var(--muted)">Color personalizado:</label>
+          <input type="color" id="bg-color-pick" value="#F0F2F5" style="width:48px;height:32px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px"/>
+          <button class="btn btn-g btn-sm" onclick="applyBgColor(document.getElementById('bg-color-pick').value)">Aplicar</button>
+        </div>
+      </div>
+      <!-- Gradiente -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🌈 Gradiente</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="bg-gradients">
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#667eea,#764ba2)" style="background:linear-gradient(135deg,#667eea,#764ba2)" title="Violeta"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#11998e,#38ef7d)" style="background:linear-gradient(135deg,#11998e,#38ef7d)" title="Verde"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#f093fb,#f5576c)" style="background:linear-gradient(135deg,#f093fb,#f5576c)" title="Rosa"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#4facfe,#00f2fe)" style="background:linear-gradient(135deg,#4facfe,#00f2fe)" title="Cielo"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#43e97b,#38f9d7)" style="background:linear-gradient(135deg,#43e97b,#38f9d7)" title="Menta"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#fa709a,#fee140)" style="background:linear-gradient(135deg,#fa709a,#fee140)" title="Sunset"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#1e3c72,#2a5298)" style="background:linear-gradient(135deg,#1e3c72,#2a5298)" title="Noche azul"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#134e5e,#71b280)" style="background:linear-gradient(135deg,#134e5e,#71b280)" title="Foresta"></div>
+        </div>
+      </div>
+      <!-- Imagen -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🖼 Imagen de fondo</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="bg-img-file" accept="image/*" style="font-size:12px;flex:1" onchange="applyBgImage(this)"/>
+          <button class="btn btn-sm" onclick="applyBgUrl()">🔗 URL</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">Opacidad overlay:</label>
+          <input type="range" id="bg-opacity" min="0" max="90" value="0" step="5" style="flex:1" oninput="updateBgOverlay(this.value)"/>
+          <span id="bg-opacity-val" style="font-size:12px;color:var(--muted);min-width:30px">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr" style="justify-content:space-between">
+      <button class="btn btn-sm btn-d" onclick="resetBg()">↺ Restablecer</button>
+      <button class="btn btn-p btn-sm" onclick="document.getElementById('bg-modal').classList.remove('open')">✓ Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.bg-swatch{width:36px;height:36px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.bg-swatch:hover{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.08);}
+.bg-swatch.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
+.main{transition:background .3s;}
+</style>
+
+<script>
+// ── FONDO ──────────────────────────────────────────────
+const BG_KEY='purga_bg_2026';
+function saveBgState(st){try{localStorage.setItem(BG_KEY,JSON.stringify(st));}catch(e){}}
+function loadBgState(){try{const d=localStorage.getItem(BG_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
+
+function applyBgToMain(st){
+  const main=document.querySelector('.main');
+  if(!main) return;
+  main.style.background='';
+  main.style.backgroundImage='';
+  main.style.backgroundSize='';
+  main.style.backgroundPosition='';
+  main.style.backgroundRepeat='';
+  if(st.type==='color'){main.style.background=st.value;}
+  else if(st.type==='gradient'){main.style.background=st.value;}
+  else if(st.type==='image'){
+    main.style.backgroundImage=`url('${st.value}')`;
+    main.style.backgroundSize='cover';
+    main.style.backgroundPosition='center';
+    main.style.backgroundRepeat='no-repeat';
+    // overlay
+    const opa=parseInt(st.opacity||0);
+    main.style.boxShadow='';
+    // use pseudo via a wrapper div
+    let ov=document.getElementById('bg-overlay');
+    if(!ov){ov=document.createElement('div');ov.id='bg-overlay';ov.style.cssText='position:fixed;top:0;left:220px;right:0;bottom:0;pointer-events:none;z-index:0;transition:background .3s;';document.body.appendChild(ov);}
+    ov.style.background=opa>0?`rgba(0,0,0,${opa/100})`:'transparent';
+  }
+}
+
+function applyBgColor(c){
+  const st={type:'color',value:c};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-v="'+c+'"]');
+}
+function applyBgGradient(g){
+  const st={type:'gradient',value:g};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-g="'+g+'"]');
+}
+function applyBgImage(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const st={type:'image',value:e.target.result,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+    applyBgToMain(st);saveBgState(st);
+  };
+  reader.readAsDataURL(file);
+}
+function applyBgUrl(){
+  const url=prompt('Ingresa la URL de la imagen:');
+  if(!url) return;
+  const st={type:'image',value:url,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+  applyBgToMain(st);saveBgState(st);
+}
+function updateBgOverlay(v){
+  document.getElementById('bg-opacity-val').textContent=v+'%';
+  const st=loadBgState();
+  if(st&&st.type==='image'){st.opacity=parseInt(v);applyBgToMain(st);saveBgState(st);}
+}
+function resetBg(){
+  const st={type:'color',value:'#F0F2F5'};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  document.getElementById('bg-color-pick').value='#F0F2F5';
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+}
+function clearOverlay(){const ov=document.getElementById('bg-overlay');if(ov)ov.style.background='transparent';}
+function markSwatch(sel){
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+  const el=document.querySelector('.bg-swatch'+sel);if(el)el.classList.add('active');
+}
+
+// Init swatches click
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('#bg-presets .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgColor(this.dataset.v);document.getElementById('bg-color-pick').value=this.dataset.v;});
+  });
+  document.querySelectorAll('#bg-gradients .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgGradient(this.dataset.g);});
+  });
+  // Restore saved bg
+  const st=loadBgState();
+  if(st){
+    applyBgToMain(st);
+    if(st.type==='color') document.getElementById('bg-color-pick').value=st.value;
+    if(st.type==='image'&&st.opacity) document.getElementById('bg-opacity').value=st.opacity;
+  }
+});
+</script>
+
 </body></html>`);
   w.document.close();
 }
@@ -1415,84 +1689,149 @@ function addAnSheet(wb,data,keys,hasSku,isCost,name){
 }
 
 // ════════════════════════════════════════════════════════
-// PANELES MALOS
 // ════════════════════════════════════════════════════════
+// PANELES MALOS — 6 tablas (igual que Análisis)
+// ════════════════════════════════════════════════════════
+let panStore={};
+
 async function loadPaneles(){
   if(!sb) return;
   await loadMaestro();
   const anio=parseInt(document.getElementById('pan-anio').value);
-  panT1={}; panT2={};
-  SKU_ORDER.forEach(s=>{panT1[s]=Array(12).fill(0);panT2[s]=Array(12).fill(0);});
-  const {data}=await sb.from('purgas').select('mp_sku,sku,mes,paneles_malos').eq('anio',anio);
+  // Estructura: p1=SKU cant, p2=SKU costo, p3=Cuenta cant, p4=Cuenta costo, p5=Maq cant, p6=Maq costo
+  panStore={p1:{},p2:{},p3:{},p4:{},p5:{},p6:{}};
+  SKU_ORDER.forEach(s=>{panStore.p1[s]=Array(12).fill(0);panStore.p2[s]=Array(12).fill(0);});
+  CUENTAS.forEach(c=>{panStore.p3[c]=Array(12).fill(0);panStore.p4[c]=Array(12).fill(0);});
+  MAQUINAS.forEach(m=>{panStore.p5[m]=Array(12).fill(0);panStore.p6[m]=Array(12).fill(0);});
+
+  const {data}=await sb.from('purgas').select('mp_sku,sku,mes,paneles_malos,cuenta,maquina').eq('anio',anio);
   (data||[]).forEach(r=>{
-    const sku=r.mp_sku||r.sku||'19990', mes=parseInt(r.mes)-1;
+    const sku=r.mp_sku||r.sku||'19990';
+    const mes=parseInt(r.mes)-1;
     if(mes<0||mes>11) return;
     const pm=parseFloat(r.paneles_malos)||0;
-    if(!panT1[sku]){panT1[sku]=Array(12).fill(0);panT2[sku]=Array(12).fill(0);}
-    panT1[sku][mes]+=pm; panT2[sku][mes]+=pm*gCPan(sku);
+    if(pm===0) return;
+    const costo=pm*gCPan(sku);
+    const cta=r.cuenta||'SIN CUENTA';
+    const maq=r.maquina||'SIN MÁQUINA';
+    // SKU
+    if(!panStore.p1[sku]){panStore.p1[sku]=Array(12).fill(0);panStore.p2[sku]=Array(12).fill(0);}
+    panStore.p1[sku][mes]+=pm; panStore.p2[sku][mes]+=costo;
+    // Cuenta
+    if(!panStore.p3[cta]){panStore.p3[cta]=Array(12).fill(0);panStore.p4[cta]=Array(12).fill(0);}
+    panStore.p3[cta][mes]+=pm; panStore.p4[cta][mes]+=costo;
+    // Máquina
+    if(!panStore.p5[maq]){panStore.p5[maq]=Array(12).fill(0);panStore.p6[maq]=Array(12).fill(0);}
+    panStore.p5[maq][mes]+=pm; panStore.p6[maq][mes]+=costo;
   });
-  renderPanT1(); renderPanT2();
+
+  // Render las 6 tablas reutilizando renderAnKG / renderAnCost con prefijo "pan-"
+  renderPanKG('p1',SKU_ORDER,true,'pan-t1-cols','pan-t1-body');
+  renderPanCost('p2',SKU_ORDER,true,'pan-t2-cols','pan-t2-body');
+  renderPanKG('p3',CUENTAS,false,'pan-t3-cols','pan-t3-body');
+  renderPanCost('p4',CUENTAS,false,'pan-t4-cols','pan-t4-body');
+  renderPanKG('p5',MAQUINAS,false,'pan-t5-cols','pan-t5-body');
+  renderPanCost('p6',MAQUINAS,false,'pan-t6-cols','pan-t6-body');
 }
-function renderPanT1(){
-  const tots=Array(12).fill(0); let html='';
-  const allK=[...new Set([...SKU_ORDER,...Object.keys(panT1)])];
-  allK.forEach(sku=>{
-    const vals=panT1[sku]||Array(12).fill(0);
+
+function buildPanCols(colsId,hasSku,hasMom){
+  const el=document.getElementById(colsId);
+  if(!el) return;
+  let h=hasSku?'<th class="left" style="min-width:65px">SKU</th>':''
+  h+='<th class="left" style="min-width:165px">DESCRIPCION</th>';
+  ML.forEach(m=>h+='<th>'+m+'</th>');
+  h+='<th style="min-width:60px">TOTAL</th>';
+  if(hasMom) h+='<th style="min-width:58px">MOM%</th>';
+  el.innerHTML=h;
+}
+
+function renderPanKG(key,keys,hasSku,colsId,bodyId){
+  buildPanCols(colsId,hasSku,false);
+  const data=panStore[key], tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...keys,...Object.keys(data)])];
+  allK.forEach(k=>{
+    const vals=data[k]||Array(12).fill(0);
     const tot=vals.reduce((a,b)=>a+b,0);
     vals.forEach((v,i)=>tots[i]+=v);
-    html+='<tr><td class="muted" style="font-size:11px">'+sku+'</td><td style="font-size:11.5px;white-space:nowrap">'+gDesc(sku)+'</td>'
+    html+='<tr>'+(hasSku?'<td class="muted" style="font-size:11px">'+k+'</td>':'')+'<td style="font-size:11.5px;white-space:nowrap">'+gDesc(k)+'</td>'
       +vals.map(v=>v>0?'<td class="tr" style="font-weight:500">'+fmtN(v)+'</td>':'<td class="tr muted">0</td>').join('')
       +'<td class="tr" style="background:#FEFCE8;color:var(--gold);font-weight:600">'+( tot>0?fmtN(tot):'0' )+'</td></tr>';
   });
   const gt=tots.reduce((a,b)=>a+b,0);
-  html+='<tr class="total-row"><td>TOTAL</td><td>TOTAL POR MES</td>'
-    +tots.map(v=>'<td class="tr">'+( v>0?fmtN(v):'—' )+'</td>').join('')+'<td class="tr">'+fmtN(gt)+'</td></tr>';
-  document.getElementById('pan-t1-body').innerHTML=html;
+  html+='<tr class="tr-total-y">'+(hasSku?'<td>TOTAL</td>':'')+'<td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?fmtN(v):'—' )+'</td>').join('')
+    +'<td class="tr">'+fmtN(gt)+'</td></tr>';
+  document.getElementById(bodyId).innerHTML=html||emptyRow(hasSku?16:15);
 }
-function renderPanT2(){
-  const tots=Array(12).fill(0); let html='';
-  const allK=[...new Set([...SKU_ORDER,...Object.keys(panT2)])];
-  allK.forEach(sku=>{
-    const vals=panT2[sku]||Array(12).fill(0);
+
+function renderPanCost(key,keys,hasSku,colsId,bodyId){
+  buildPanCols(colsId,hasSku,true);
+  const data=panStore[key], tots=Array(12).fill(0); let html='';
+  const allK=[...new Set([...keys,...Object.keys(data)])];
+  allK.forEach(k=>{
+    const vals=data[k]||Array(12).fill(0);
     const tot=vals.reduce((a,b)=>a+b,0);
     vals.forEach((v,i)=>tots[i]+=v);
-    html+='<tr><td style="font-size:11.5px;white-space:nowrap">'+gDesc(sku)+'</td>'
-      +vals.map(v=>v>0?'<td class="tr" style="color:var(--blue);font-weight:500">$'+fmtM(v)+'</td>':'<td class="tr muted">$ —</td>').join('')
-      +'<td class="tr" style="background:#DBEAFE;color:var(--blue);font-weight:600">'+( tot>0?'$'+fmtM(tot):'$ —' )+'</td>'
+    html+='<tr>'+(hasSku?'<td class="muted" style="font-size:11px">'+k+'</td>':'')+'<td style="font-size:11.5px;white-space:nowrap">'+gDesc(k)+'</td>'
+      +vals.map(v=>v>0?'<td class="tr" style="color:var(--blue);font-weight:500">$'+fmtM(v)+'</td>':'<td class="tr muted">$ -</td>').join('')
+      +'<td class="tr" style="background:#DBEAFE;color:var(--blue);font-weight:600">'+( tot>0?'$'+fmtM(tot):'$ -' )+'</td>'
       +'<td class="tr">'+momHtml(vals)+'</td></tr>';
   });
   const gt=tots.reduce((a,b)=>a+b,0);
-  html+='<tr class="total-row"><td>TOTAL POR MES</td>'
-    +tots.map(v=>'<td class="tr">'+( v>0?'$'+fmtM(v):'$ —' )+'</td>').join('')
+  html+='<tr class="tr-total-b">'+(hasSku?'<td>TOTAL</td>':'')+'<td>TOTAL POR MES</td>'
+    +tots.map(v=>'<td class="tr">'+( v>0?'$'+fmtM(v):'$ -' )+'</td>').join('')
     +'<td class="tr">$'+fmtM(gt)+'</td><td></td></tr>';
-  document.getElementById('pan-t2-body').innerHTML=html;
+  document.getElementById(bodyId).innerHTML=html||emptyRow(hasSku?16:15);
 }
+
 function exportPanTodo(){
   const wb=XLSX.utils.book_new();
-  addPanSheet(wb,panT1,true,'Paneles Malos'); addPanSheet(wb,panT2,false,'Costo Paneles');
+  addPanSheetNew(wb,panStore.p1,SKU_ORDER,true,false,'Pan Malos SKU cant');
+  addPanSheetNew(wb,panStore.p2,SKU_ORDER,true,true,'Pan Malos SKU costo');
+  addPanSheetNew(wb,panStore.p3,CUENTAS,false,false,'Pan Malos Cuenta cant');
+  addPanSheetNew(wb,panStore.p4,CUENTAS,false,true,'Pan Malos Cuenta costo');
+  addPanSheetNew(wb,panStore.p5,MAQUINAS,false,false,'Pan Malos Maquina cant');
+  addPanSheetNew(wb,panStore.p6,MAQUINAS,false,true,'Pan Malos Maquina costo');
   XLSX.writeFile(wb,'paneles_malos_2026.xlsx');
 }
-function exportPanT1(){const wb=XLSX.utils.book_new();addPanSheet(wb,panT1,true,'Paneles Malos');XLSX.writeFile(wb,'paneles_cant.xlsx');}
-function exportPanT2(){const wb=XLSX.utils.book_new();addPanSheet(wb,panT2,false,'Costo Paneles');XLSX.writeFile(wb,'costo_paneles.xlsx');}
-function addPanSheet(wb,data,hasSku,name){
+
+function exportPanSheet(key){
+  const cfg={
+    p1:{keys:SKU_ORDER,hs:true,ic:false,n:'Pan Malos SKU cant'},
+    p2:{keys:SKU_ORDER,hs:true,ic:true,n:'Pan Malos SKU costo'},
+    p3:{keys:CUENTAS,hs:false,ic:false,n:'Pan Malos Cuenta cant'},
+    p4:{keys:CUENTAS,hs:false,ic:true,n:'Pan Malos Cuenta costo'},
+    p5:{keys:MAQUINAS,hs:false,ic:false,n:'Pan Malos Maquina cant'},
+    p6:{keys:MAQUINAS,hs:false,ic:true,n:'Pan Malos Maquina costo'}
+  }[key];
+  const wb=XLSX.utils.book_new();
+  addPanSheetNew(wb,panStore[key],cfg.keys,cfg.hs,cfg.ic,cfg.n);
+  XLSX.writeFile(wb,cfg.n.replace(/ /g,'_')+'.xlsx');
+}
+
+function addPanSheetNew(wb,data,keys,hasSku,isCost,name){
   const hdr=hasSku?['SKU','DESCRIPCION']:['DESCRIPCION'];
-  hdr.push(...ML,'TOTAL'); if(!hasSku) hdr.push('MOM%');
-  const allK=[...new Set([...SKU_ORDER,...Object.keys(data)])];
+  hdr.push(...ML,'TOTAL'); if(isCost) hdr.push('MOM%');
+  const allK=[...new Set([...keys,...Object.keys(data)])];
   const rows=allK.map(k=>{
     const vals=data[k]||Array(12).fill(0);
     const tot=vals.reduce((a,b)=>a+b,0);
     const base=hasSku?[k,gDesc(k)]:[gDesc(k)];
     const row=[...base,...vals,tot];
-    if(!hasSku){const m=calcMOM(vals);row.push(m!==null?(m+'%'):'0%');}
+    if(isCost){const m=calcMOM(vals);row.push(m!==null?(m+'%'):'0%');}
     return row;
   });
   const tots=Array(12).fill(0);
   allK.forEach(k=>(data[k]||[]).forEach((v,i)=>tots[i]+=v));
   const totRow=hasSku?['','TOTAL POR MES']:['TOTAL POR MES'];
-  totRow.push(...tots,tots.reduce((a,b)=>a+b,0)); if(!hasSku) totRow.push('');
+  totRow.push(...tots,tots.reduce((a,b)=>a+b,0)); if(isCost) totRow.push('');
   rows.push(totRow);
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdr,...rows]),name);
 }
+
+// Mantener compatibilidad con exportPanT1/T2 por si acaso
+function exportPanT1(){exportPanSheet('p1');}
+function exportPanT2(){exportPanSheet('p2');}
 
 // ════════════════════════════════════════════════════════
 // DATA
@@ -1627,5 +1966,164 @@ function exportDataCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='maestro_materiales.csv';a.click();
 }
 </script>
+
+<!-- MODAL FONDO -->
+<div class="modal-bg" id="bg-modal" style="z-index:600">
+  <div class="modal" style="width:480px">
+    <div class="modal-hdr"><h3>🎨 Personalizar Fondo</h3><button class="modal-close" onclick="document.getElementById('bg-modal').classList.remove('open')">✕</button></div>
+    <div class="modal-body" style="padding:20px">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Personaliza el fondo del área de módulos (no afecta el sidebar).</p>
+      <!-- Color sólido -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🎨 Color sólido</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="bg-presets">
+          <div class="bg-swatch" data-v="#F0F2F5" style="background:#F0F2F5" title="Gris claro (default)"></div>
+          <div class="bg-swatch" data-v="#EFF6FF" style="background:#EFF6FF" title="Azul suave"></div>
+          <div class="bg-swatch" data-v="#F0FDF4" style="background:#F0FDF4" title="Verde suave"></div>
+          <div class="bg-swatch" data-v="#FEF9C3" style="background:#FEF9C3" title="Amarillo suave"></div>
+          <div class="bg-swatch" data-v="#FDF4FF" style="background:#FDF4FF" title="Violeta suave"></div>
+          <div class="bg-swatch" data-v="#FFF7ED" style="background:#FFF7ED" title="Naranja suave"></div>
+          <div class="bg-swatch" data-v="#1E293B" style="background:#1E293B" title="Oscuro"></div>
+          <div class="bg-swatch" data-v="#0F172A" style="background:#0F172A" title="Noche"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-size:12px;color:var(--muted)">Color personalizado:</label>
+          <input type="color" id="bg-color-pick" value="#F0F2F5" style="width:48px;height:32px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px"/>
+          <button class="btn btn-g btn-sm" onclick="applyBgColor(document.getElementById('bg-color-pick').value)">Aplicar</button>
+        </div>
+      </div>
+      <!-- Gradiente -->
+      <div style="margin-bottom:18px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🌈 Gradiente</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="bg-gradients">
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#667eea,#764ba2)" style="background:linear-gradient(135deg,#667eea,#764ba2)" title="Violeta"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#11998e,#38ef7d)" style="background:linear-gradient(135deg,#11998e,#38ef7d)" title="Verde"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#f093fb,#f5576c)" style="background:linear-gradient(135deg,#f093fb,#f5576c)" title="Rosa"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#4facfe,#00f2fe)" style="background:linear-gradient(135deg,#4facfe,#00f2fe)" title="Cielo"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#43e97b,#38f9d7)" style="background:linear-gradient(135deg,#43e97b,#38f9d7)" title="Menta"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#fa709a,#fee140)" style="background:linear-gradient(135deg,#fa709a,#fee140)" title="Sunset"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#1e3c72,#2a5298)" style="background:linear-gradient(135deg,#1e3c72,#2a5298)" title="Noche azul"></div>
+          <div class="bg-swatch" data-g="linear-gradient(135deg,#134e5e,#71b280)" style="background:linear-gradient(135deg,#134e5e,#71b280)" title="Foresta"></div>
+        </div>
+      </div>
+      <!-- Imagen -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🖼 Imagen de fondo</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="bg-img-file" accept="image/*" style="font-size:12px;flex:1" onchange="applyBgImage(this)"/>
+          <button class="btn btn-sm" onclick="applyBgUrl()">🔗 URL</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <label style="font-size:12px;color:var(--muted)">Opacidad overlay:</label>
+          <input type="range" id="bg-opacity" min="0" max="90" value="0" step="5" style="flex:1" oninput="updateBgOverlay(this.value)"/>
+          <span id="bg-opacity-val" style="font-size:12px;color:var(--muted);min-width:30px">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ftr" style="justify-content:space-between">
+      <button class="btn btn-sm btn-d" onclick="resetBg()">↺ Restablecer</button>
+      <button class="btn btn-p btn-sm" onclick="document.getElementById('bg-modal').classList.remove('open')">✓ Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.bg-swatch{width:36px;height:36px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.bg-swatch:hover{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.08);}
+.bg-swatch.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
+.main{transition:background .3s;}
+</style>
+
+<script>
+// ── FONDO ──────────────────────────────────────────────
+const BG_KEY='purga_bg_2026';
+function saveBgState(st){try{localStorage.setItem(BG_KEY,JSON.stringify(st));}catch(e){}}
+function loadBgState(){try{const d=localStorage.getItem(BG_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
+
+function applyBgToMain(st){
+  const main=document.querySelector('.main');
+  if(!main) return;
+  main.style.background='';
+  main.style.backgroundImage='';
+  main.style.backgroundSize='';
+  main.style.backgroundPosition='';
+  main.style.backgroundRepeat='';
+  if(st.type==='color'){main.style.background=st.value;}
+  else if(st.type==='gradient'){main.style.background=st.value;}
+  else if(st.type==='image'){
+    main.style.backgroundImage=`url('${st.value}')`;
+    main.style.backgroundSize='cover';
+    main.style.backgroundPosition='center';
+    main.style.backgroundRepeat='no-repeat';
+    // overlay
+    const opa=parseInt(st.opacity||0);
+    main.style.boxShadow='';
+    // use pseudo via a wrapper div
+    let ov=document.getElementById('bg-overlay');
+    if(!ov){ov=document.createElement('div');ov.id='bg-overlay';ov.style.cssText='position:fixed;top:0;left:220px;right:0;bottom:0;pointer-events:none;z-index:0;transition:background .3s;';document.body.appendChild(ov);}
+    ov.style.background=opa>0?`rgba(0,0,0,${opa/100})`:'transparent';
+  }
+}
+
+function applyBgColor(c){
+  const st={type:'color',value:c};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-v="'+c+'"]');
+}
+function applyBgGradient(g){
+  const st={type:'gradient',value:g};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-g="'+g+'"]');
+}
+function applyBgImage(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const st={type:'image',value:e.target.result,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+    applyBgToMain(st);saveBgState(st);
+  };
+  reader.readAsDataURL(file);
+}
+function applyBgUrl(){
+  const url=prompt('Ingresa la URL de la imagen:');
+  if(!url) return;
+  const st={type:'image',value:url,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+  applyBgToMain(st);saveBgState(st);
+}
+function updateBgOverlay(v){
+  document.getElementById('bg-opacity-val').textContent=v+'%';
+  const st=loadBgState();
+  if(st&&st.type==='image'){st.opacity=parseInt(v);applyBgToMain(st);saveBgState(st);}
+}
+function resetBg(){
+  const st={type:'color',value:'#F0F2F5'};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  document.getElementById('bg-color-pick').value='#F0F2F5';
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+}
+function clearOverlay(){const ov=document.getElementById('bg-overlay');if(ov)ov.style.background='transparent';}
+function markSwatch(sel){
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+  const el=document.querySelector('.bg-swatch'+sel);if(el)el.classList.add('active');
+}
+
+// Init swatches click
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('#bg-presets .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgColor(this.dataset.v);document.getElementById('bg-color-pick').value=this.dataset.v;});
+  });
+  document.querySelectorAll('#bg-gradients .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgGradient(this.dataset.g);});
+  });
+  // Restore saved bg
+  const st=loadBgState();
+  if(st){
+    applyBgToMain(st);
+    if(st.type==='color') document.getElementById('bg-color-pick').value=st.value;
+    if(st.type==='image'&&st.opacity) document.getElementById('bg-opacity').value=st.opacity;
+  }
+});
+</script>
+
 </body>
 </html>
