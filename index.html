@@ -262,6 +262,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="analisis">📊 Análisis Purga</div>
       <div class="nav-item" data-mod="paneles">◧ Paneles Malos</div>
       <div class="nav-item" data-mod="data">▤ Data</div>
+      <div class="nav-item" data-mod="voucher">🖨 Voucher Ingreso</div>
     </nav>
     <div class="sb-bottom">
       <div class="db-row"><div class="dot" id="db-dot"></div><span id="db-txt">Conectando...</span></div>
@@ -493,6 +494,78 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       </div>
     </div>
 
+
+    <!-- VOUCHER -->
+    <div id="mod-voucher" class="module">
+      <div class="page-hdr">
+        <div><h2>Voucher de Ingreso</h2><p>Reimprimir registros diarios de purga</p></div>
+      </div>
+      <div class="toolbar">
+        <div class="cg"><label>Fecha</label>
+          <input type="date" id="vc-fecha" style="width:150px"/>
+        </div>
+        <div class="cg"><label>Mes</label>
+          <select id="vc-mes">
+            <option value="">Todos</option>
+            <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+            <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+            <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+        </div>
+        <div class="cg"><label>Cuenta</label>
+          <select id="vc-cta">
+            <option value="">Todas</option>
+            <option>IMPU</option><option>IMPU PIN</option><option>HCPU</option><option>IMR</option><option>CMR</option>
+          </select>
+        </div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" onclick="loadVoucher()">🔍 Buscar</button>
+        <button class="btn btn-sm" style="background:#F3F4F6;border-color:#D1D5DB" onclick="imprimirVoucher()">🖨 Imprimir resultado</button>
+        <span id="vc-count" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="cards" id="vc-cards" style="display:none">
+        <div class="crd green"><div class="crd-lbl">Total Kg Purga</div><div class="crd-val" id="vc-kg">—</div></div>
+        <div class="crd blue"><div class="crd-lbl">Costo MP Total</div><div class="crd-val" id="vc-cmp">—</div></div>
+        <div class="crd gold"><div class="crd-lbl">Costo Paneles</div><div class="crd-val" id="vc-cpan">—</div></div>
+        <div class="crd purple"><div class="crd-lbl">Registros</div><div class="crd-val" id="vc-reg">—</div></div>
+        <div class="crd red"><div class="crd-lbl">Paneles Malos</div><div class="crd-val" id="vc-pmlos">—</div></div>
+      </div>
+
+      <!-- Tabla de resultados -->
+      <div class="card tbl-wrap" id="vc-table-wrap">
+        <div class="loading" id="vc-loading" style="display:none"><div class="spinner"></div>Cargando...</div>
+        <table id="vc-tbl" style="display:none">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:75px">Cuenta</th>
+              <th style="text-align:left;min-width:90px">Máquina</th>
+              <th class="tc" style="min-width:88px">Fecha</th>
+              <th class="tc" style="min-width:40px">Mes</th>
+              <th class="tr" style="min-width:58px">Kg Purga</th>
+              <th class="tr" style="min-width:52px">P.Color</th>
+              <th class="tr" style="min-width:52px">P.s/f</th>
+              <th class="tr" style="min-width:58px">Kg p.s/f</th>
+              <th class="tr" style="min-width:52px">P.Malos</th>
+              <th class="tr" style="min-width:52px">Kg Panel</th>
+              <th class="tc" style="min-width:58px">Medida</th>
+              <th class="tc" style="min-width:46px">Altura</th>
+              <th class="tc" style="min-width:42px">Slot</th>
+              <th class="tc" style="min-width:42px">OF</th>
+              <th class="tc" style="min-width:65px">MP SKU</th>
+              <th style="text-align:left;min-width:140px">MP Descripción</th>
+              <th class="tr" style="min-width:100px;background:#1e3352;color:#fff">Costo MP</th>
+              <th class="tr" style="min-width:100px;background:#1e3352;color:#fff">Costo Paneles</th>
+            </tr>
+          </thead>
+          <tbody id="vc-body"></tbody>
+        </table>
+        <div class="empty" id="vc-empty" style="display:none">No se encontraron registros para los filtros seleccionados</div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -704,6 +777,7 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     if(mod==='analisis') loadAnalisis();
     if(mod==='paneles')  loadPaneles();
     if(mod==='data')     loadData();
+    if(mod==='voucher')   loadVoucher();
     if(mod==='ingreso')  loadRecientes();
   });
 });
@@ -1673,6 +1747,269 @@ function addPanSheetNew(wb,data,keys,hasSku,isCost,name){
 // Mantener compatibilidad con exportPanT1/T2 por si acaso
 function exportPanT1(){exportPanSheet('p1');}
 function exportPanT2(){exportPanSheet('p2');}
+
+// ════════════════════════════════════════════════════════
+// VOUCHER DE INGRESO
+// ════════════════════════════════════════════════════════
+let voucherData = [];
+
+// Set today as default date on init
+document.addEventListener('DOMContentLoaded', function(){
+  const today = new Date().toISOString().split('T')[0];
+  const vcf = document.getElementById('vc-fecha');
+  if(vcf) vcf.value = today;
+});
+
+async function loadVoucher(){
+  if(!sb) return;
+  await loadMaestro();
+  const fecha = document.getElementById('vc-fecha').value;
+  const mes   = document.getElementById('vc-mes').value;
+  const cta   = document.getElementById('vc-cta').value;
+
+  // Show loading
+  document.getElementById('vc-loading').style.display='flex';
+  document.getElementById('vc-tbl').style.display='none';
+  document.getElementById('vc-empty').style.display='none';
+  document.getElementById('vc-cards').style.display='none';
+
+  let q = sb.from('purgas').select('*').eq('tipo_panel','PURGA').order('fecha_registro').order('cuenta');
+  if(fecha) q = q.eq('fecha_registro', fecha);
+  if(mes)   q = q.eq('mes', parseInt(mes));
+  if(cta)   q = q.eq('cuenta', cta);
+
+  const {data, error} = await q;
+  document.getElementById('vc-loading').style.display='none';
+
+  if(error){ document.getElementById('vc-empty').style.display='block'; return; }
+  voucherData = data || [];
+
+  if(!voucherData.length){
+    document.getElementById('vc-empty').style.display='block';
+    document.getElementById('vc-count').textContent = '0 registros';
+    return;
+  }
+
+  // Calculate KPIs
+  let sumKg=0, sumMP=0, sumPan=0, sumPmlos=0;
+  voucherData.forEach(r=>{
+    const sku = r.mp_sku||r.sku||'';
+    const kg  = parseFloat(r.kg)||0;
+    const kgB = kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+    const pm  = parseFloat(r.paneles_malos)||0;
+    sumKg    += kg;
+    sumMP    += kgB * gPrecio(sku);
+    sumPan   += pm  * gCPan(sku);
+    sumPmlos += pm;
+  });
+
+  document.getElementById('vc-kg').textContent    = sumKg>0   ? fmtN(sumKg)+' kg'    : '—';
+  document.getElementById('vc-cmp').textContent   = sumMP>0   ? '$'+fmtM(sumMP)       : '—';
+  document.getElementById('vc-cpan').textContent  = sumPan>0  ? '$'+fmtM(sumPan)      : '—';
+  document.getElementById('vc-reg').textContent   = voucherData.length;
+  document.getElementById('vc-pmlos').textContent = sumPmlos>0 ? fmtN(sumPmlos)+' un' : '—';
+  document.getElementById('vc-cards').style.display = '';
+  document.getElementById('vc-count').textContent = voucherData.length + ' registros';
+
+  // Build table rows
+  let html='', totKg=0, totMP=0, totPan=0;
+  voucherData.forEach(r=>{
+    const sku  = r.mp_sku||r.sku||'';
+    const kg   = parseFloat(r.kg)||0;
+    const kgB  = kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+    const pm   = parseFloat(r.paneles_malos)||0;
+    const cMP  = kgB * gPrecio(sku);
+    const cPan = pm  * gCPan(sku);
+    totKg += kg; totMP += cMP; totPan += cPan;
+
+    html += '<tr>'
+      +'<td><span class="badge badge-g" style="font-size:10px">'+(r.cuenta||'—')+'</span></td>'
+      +'<td style="font-size:11.5px">'+(r.maquina||'—')+'</td>'
+      +'<td class="tc muted">'+(r.fecha_registro||'—')+'</td>'
+      +'<td class="tc">'+(MSL[r.mes]||r.mes)+'</td>'
+      +'<td class="tr">'+nv(r.kg)+'</td>'
+      +'<td class="tr">'+nv(r.purga_color)+'</td>'
+      +'<td class="tr">'+nv(r.paneles_sin_frame)+'</td>'
+      +'<td class="tr">'+nv(r.kg_paneles_sin_frame)+'</td>'
+      +'<td class="tr" style="'+(pm>0?'color:var(--danger);font-weight:600':'')+'">'+nv(r.paneles_malos)+'</td>'
+      +'<td class="tr">'+nv(r.kg_panel)+'</td>'
+      +'<td class="tc muted">'+sv(r.medida)+'</td>'
+      +'<td class="tc muted">'+sv(r.altura)+'</td>'
+      +'<td class="tc muted">'+sv(r.slot)+'</td>'
+      +'<td class="tc muted">'+sv(r.of_numero)+'</td>'
+      +'<td class="tc"><span class="badge badge-gray" style="font-size:10px">'+(sku||'—')+'</span></td>'
+      +'<td style="font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.mp_descripcion||gDesc(sku)||'—')+'</td>'
+      +'<td class="tr" style="background:#EFF6FF"><span style="color:var(--blue);font-weight:500">'+(cMP>0?'$'+fmtM(cMP):'—')+'</span></td>'
+      +'<td class="tr" style="background:#FFFBEB"><span style="color:var(--gold);font-weight:500">'+(cPan>0?'$'+fmtM0(cPan):'—')+'</span></td>'
+      +'</tr>';
+  });
+
+  // Total row
+  html += '<tr class="tr-total-b">'
+    +'<td colspan="4" style="text-align:left;padding-left:12px;font-weight:600">TOTALES — '+voucherData.length+' registros</td>'
+    +'<td class="tr">'+fmtN(totKg)+'</td>'
+    +'<td colspan="11"></td>'
+    +'<td class="tr" style="background:#DBEAFE"><span style="color:var(--blue);font-weight:700">$'+fmtM(totMP)+'</span></td>'
+    +'<td class="tr" style="background:#FEF3C7"><span style="color:var(--gold);font-weight:700">$'+fmtM(totPan)+'</span></td>'
+    +'</tr>';
+
+  document.getElementById('vc-body').innerHTML = html;
+  document.getElementById('vc-tbl').style.display = 'table';
+}
+
+function imprimirVoucher(){
+  if(!voucherData.length){ alert('Primero realiza una búsqueda'); return; }
+
+  const fechaEl  = document.getElementById('vc-fecha');
+  const mesEl    = document.getElementById('vc-mes');
+  const fecha    = fechaEl.value || '';
+  const mesNombre = mesEl.options[mesEl.selectedIndex].text;
+
+  // KPI values from screen
+  const kg   = document.getElementById('vc-kg').textContent;
+  const cmp  = document.getElementById('vc-cmp').textContent;
+  const cpan = document.getElementById('vc-cpan').textContent;
+  const nreg = document.getElementById('vc-reg').textContent;
+  const pmls = document.getElementById('vc-pmlos').textContent;
+
+  // Colores por cuenta
+  const ctaColor = {'IMPU':'#166534','IMPU PIN':'#1D4ED8','HCPU':'#7C3AED','IMR':'#B45309','CMR':'#DC2626'};
+  const ctaBg    = {'IMPU':'#DCFCE7','IMPU PIN':'#DBEAFE','HCPU':'#EDE9FE','IMR':'#FEF3C7','CMR':'#FEE2E2'};
+
+  let totKg=0, totPm=0, totMP=0, totPan=0;
+  const rowsHtml = voucherData.map((r,idx)=>{
+    const sku  = r.mp_sku||r.sku||'';
+    const kg   = parseFloat(r.kg)||0;
+    const kgB  = kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+    const pm   = parseFloat(r.paneles_malos)||0;
+    const cMP  = kgB * gPrecio(sku);
+    const cPan = pm  * gCPan(sku);
+    totKg+=kg; totPm+=pm; totMP+=cMP; totPan+=cPan;
+    const even = idx%2===0;
+    const cc = ctaColor[r.cuenta]||'#374151';
+    const cb = ctaBg[r.cuenta]||'#F3F4F6';
+    const f  = (v)=>(parseFloat(v)||0)>0?(parseFloat(v)).toFixed(1):'—';
+    return '<tr style="background:'+(even?'#fff':'#F9FAFB')+'">'
+      +'<td style="background:'+cb+';color:'+cc+';font-weight:700;border:1px solid #d1d5db;padding:5px 6px;white-space:nowrap">'+(r.cuenta||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;font-weight:600">'+(r.maquina||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center;color:#555">'+(r.fecha_registro||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center">'+(MSL[r.mes]||r.mes)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;font-weight:'+(kg>0?700:400)+';color:'+(kg>0?'#166534':'#9CA3AF')+'">'+f(r.kg)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;color:'+(( parseFloat(r.purga_color)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+f(r.purga_color)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;color:'+((parseFloat(r.paneles_sin_frame)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+f(r.paneles_sin_frame)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;color:'+((parseFloat(r.kg_paneles_sin_frame)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+f(r.kg_paneles_sin_frame)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;font-weight:'+(pm>0?700:400)+';color:'+(pm>0?'#DC2626':'#9CA3AF')+'">'+f(r.paneles_malos)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;color:'+((parseFloat(r.kg_panel)||0)>0?'#92400E':'#9CA3AF')+'">'+f(r.kg_panel)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center;color:#555">'+(r.medida||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center;color:#555">'+(r.altura||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center;color:#555">'+(r.slot||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:center;font-size:9px;background:#F0F9FF;color:#1D4ED8;font-weight:600">'+(sku||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;font-size:9px;color:#6B7280;max-width:120px">'+(r.mp_descripcion||gDesc(sku)||'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;background:#EFF6FF;color:#1D4ED8;font-weight:600">'+(cMP>0?'$'+fmtM(cMP):'—')+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:5px 6px;text-align:right;background:#FFFBEB;color:#92400E;font-weight:600">'+(cPan>0?'$'+fmtM0(cPan):'—')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  const w = window.open('','_blank','width=1200,height=820');
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    +'<title>Voucher Ingreso Purga '+(fecha||mesNombre)+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{font-family:Arial,sans-serif;font-size:10.5px;color:#111;background:#fff;}'
+    +'.page{padding:20px 24px;}'
+    +'.doc-header{display:flex;align-items:stretch;margin-bottom:14px;border:2px solid #1E3A2F;border-radius:6px;overflow:hidden;}'
+    +'.hdr-logo{background:#1E3A2F;color:#fff;padding:12px 18px;display:flex;flex-direction:column;justify-content:center;min-width:200px;}'
+    +'.hdr-logo h1{font-size:13px;font-weight:700;margin-bottom:2px;}'
+    +'.hdr-logo p{font-size:10px;opacity:.7;}'
+    +'.hdr-meta{flex:1;padding:10px 16px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center;background:#F0FDF4;}'
+    +'.meta-item{display:flex;flex-direction:column;gap:1px;}'
+    +'.meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:#6B7280;font-weight:600;}'
+    +'.meta-value{font-size:12px;font-weight:700;color:#1E3A2F;}'
+    +'table{width:100%;border-collapse:collapse;font-size:9px;}'
+    +'.th-main{background:#1E3A2F;color:#fff;padding:6px 6px;text-align:center;font-weight:700;font-size:9.5px;letter-spacing:.04em;border:1px solid rgba(255,255,255,0.1);}'
+    +'.th-cost{background:#1e3352;color:#fff;padding:6px 6px;text-align:center;font-weight:700;font-size:9.5px;letter-spacing:.04em;border:1px solid rgba(255,255,255,0.1);}'
+    +'.th-sub{background:#2D4A3E;color:#e5f5ec;padding:6px 5px;font-size:8.5px;font-weight:600;text-align:center;border:1px solid rgba(255,255,255,0.1);white-space:nowrap;}'
+    +'.total-row td{background:#D1FAE5!important;font-weight:700;color:#166534;border:1px solid #6EE7B7;padding:6px;font-size:10px;}'
+    +'.firmas{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:28px;}'
+    +'.firma-box{display:flex;flex-direction:column;align-items:center;gap:5px;}'
+    +'.firma-line{width:100%;border-bottom:1.5px solid #374151;margin-bottom:3px;}'
+    +'.firma-label{font-size:10px;font-weight:700;color:#1E3A2F;text-transform:uppercase;letter-spacing:.05em;}'
+    +'.firma-sub{font-size:9px;color:#6B7280;}'
+    +'.no-print{background:#1E3A2F;padding:10px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99;}'
+    +'.no-print h2{color:#fff;font-size:13px;flex:1;}'
+    +'.btn-pdf{padding:7px 18px;background:#16A34A;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;}'
+    +'.footer{margin-top:14px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8.5px;color:#9CA3AF;display:flex;justify-content:space-between;}'
+    +'* { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }'
+    +'@media print{.no-print{display:none!important;}.page{padding:10px 14px;}@page{size:A4 landscape;margin:10mm;}}'
+    +'</style></head><body>'
+    +'<div class="no-print"><h2>🌿 Voucher Ingreso Purga — '+(fecha?'Fecha: '+fecha:'Mes: '+mesNombre)+'</h2>'
+    +'<button class="btn-pdf" onclick="window.print()">🖨 Imprimir / Guardar PDF</button></div>'
+    +'<div class="page">'
+    // Header
+    +'<div class="doc-header">'
+    +'<div class="hdr-logo"><h1>🌿 Sistema Purga</h1><p>LB Logística · 2026</p></div>'
+    +'<div class="hdr-meta">'
+    +'<div class="meta-item"><span class="meta-label">Documento</span><span class="meta-value">Voucher de Ingreso</span></div>'
+    +'<div class="meta-item"><span class="meta-label">'+(fecha?'Fecha':'Mes')+'</span><span class="meta-value">'+(fecha||mesNombre.toUpperCase())+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Total Kg Purga</span><span class="meta-value" style="color:#166534">'+kg+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Costo MP</span><span class="meta-value" style="color:#1D4ED8">'+cmp+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Pan Malos</span><span class="meta-value" style="color:#DC2626">'+pmls+'</span></div>'
+    +'</div></div>'
+    // Table
+    +'<table>'
+    +'<thead>'
+    +'<tr>'
+    +'<th colspan="10" class="th-main">📋 DATOS DE INGRESO DE PURGA</th>'
+    +'<th colspan="3" class="th-cost" style="background:#0F766E">📐 PANEL</th>'
+    +'<th colspan="2" class="th-main" style="background:#2D6A4F">🏷 MATERIAL</th>'
+    +'<th colspan="2" class="th-cost">💰 COSTOS</th>'
+    +'</tr>'
+    +'<tr>'
+    +'<th class="th-sub" style="text-align:left">CUENTA</th>'
+    +'<th class="th-sub" style="text-align:left">MÁQUINA</th>'
+    +'<th class="th-sub">FECHA</th>'
+    +'<th class="th-sub">MES</th>'
+    +'<th class="th-sub">KG PURGA</th>'
+    +'<th class="th-sub">P.COLOR</th>'
+    +'<th class="th-sub">PAN S/F</th>'
+    +'<th class="th-sub">KG PAN S/F</th>'
+    +'<th class="th-sub">PAN MALOS</th>'
+    +'<th class="th-sub">KG PANEL</th>'
+    +'<th class="th-sub">MEDIDA</th>'
+    +'<th class="th-sub">ALTURA</th>'
+    +'<th class="th-sub">SLOT</th>'
+    +'<th class="th-sub">MP SKU</th>'
+    +'<th class="th-sub" style="text-align:left">MP DESCRIPCIÓN</th>'
+    +'<th class="th-sub" style="background:#1e3352">COSTO MP</th>'
+    +'<th class="th-sub" style="background:#1e3352">COSTO PANELES</th>'
+    +'</tr>'
+    +'</thead>'
+    +'<tbody>'
+    + rowsHtml
+    +'<tr class="total-row">'
+    +'<td colspan="4" style="text-align:left;padding-left:8px;border:1px solid #6EE7B7">TOTALES</td>'
+    +'<td style="text-align:right;border:1px solid #6EE7B7">'+totKg.toFixed(1)+'</td>'
+    +'<td colspan="10" style="border:1px solid #6EE7B7"></td>'
+    +'<td style="text-align:right;background:#DBEAFE;color:#1D4ED8;border:1px solid #6EE7B7;font-weight:700">$'+fmtM(totMP)+'</td>'
+    +'<td style="text-align:right;background:#FEF3C7;color:#92400E;border:1px solid #6EE7B7;font-weight:700">$'+fmtM(totPan)+'</td>'
+    +'</tr>'
+    +'</tbody></table>'
+    // Firmas
+    +'<div class="firmas">'
+    +'<div class="firma-box"><div style="height:50px"></div><div class="firma-line"></div>'
+    +'<div class="firma-label">Supervisor de Turno</div>'
+    +'<div class="firma-sub">Nombre: ________________________________</div>'
+    +'<div class="firma-sub">RUT: ___________________ &nbsp; Fecha: ___________</div></div>'
+    +'<div class="firma-box"><div style="height:50px"></div><div class="firma-line"></div>'
+    +'<div class="firma-label">Encargado de Toma de Purga</div>'
+    +'<div class="firma-sub">Nombre: ________________________________</div>'
+    +'<div class="firma-sub">RUT: ___________________ &nbsp; Fecha: ___________</div></div>'
+    +'</div>'
+    +'<div class="footer"><span>LB Logística · Sistema Purga 2026</span><span>Generado: '+new Date().toLocaleString('es-CL')+'</span></div>'
+    +'</div>'
+    +'</body></html>');
+  w.document.close();
+}
 
 // ════════════════════════════════════════════════════════
 // DATA
