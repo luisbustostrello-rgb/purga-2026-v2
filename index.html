@@ -1205,166 +1205,7 @@ ${rowsHtml}
     setTimeout(function(){ window.print(); }, 600);
   });
 <\/script>
-
-<!-- MODAL FONDO -->
-<div class="modal-bg" id="bg-modal" style="z-index:600">
-  <div class="modal" style="width:480px">
-    <div class="modal-hdr"><h3>🎨 Personalizar Fondo</h3><button class="modal-close" onclick="document.getElementById('bg-modal').classList.remove('open')">✕</button></div>
-    <div class="modal-body" style="padding:20px">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Personaliza el fondo del área de módulos (no afecta el sidebar).</p>
-      <!-- Color sólido -->
-      <div style="margin-bottom:18px">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🎨 Color sólido</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="bg-presets">
-          <div class="bg-swatch" data-v="#F0F2F5" style="background:#F0F2F5" title="Gris claro (default)"></div>
-          <div class="bg-swatch" data-v="#EFF6FF" style="background:#EFF6FF" title="Azul suave"></div>
-          <div class="bg-swatch" data-v="#F0FDF4" style="background:#F0FDF4" title="Verde suave"></div>
-          <div class="bg-swatch" data-v="#FEF9C3" style="background:#FEF9C3" title="Amarillo suave"></div>
-          <div class="bg-swatch" data-v="#FDF4FF" style="background:#FDF4FF" title="Violeta suave"></div>
-          <div class="bg-swatch" data-v="#FFF7ED" style="background:#FFF7ED" title="Naranja suave"></div>
-          <div class="bg-swatch" data-v="#1E293B" style="background:#1E293B" title="Oscuro"></div>
-          <div class="bg-swatch" data-v="#0F172A" style="background:#0F172A" title="Noche"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <label style="font-size:12px;color:var(--muted)">Color personalizado:</label>
-          <input type="color" id="bg-color-pick" value="#F0F2F5" style="width:48px;height:32px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:2px"/>
-          <button class="btn btn-g btn-sm" onclick="applyBgColor(document.getElementById('bg-color-pick').value)">Aplicar</button>
-        </div>
-      </div>
-      <!-- Gradiente -->
-      <div style="margin-bottom:18px">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🌈 Gradiente</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="bg-gradients">
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#667eea,#764ba2)" style="background:linear-gradient(135deg,#667eea,#764ba2)" title="Violeta"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#11998e,#38ef7d)" style="background:linear-gradient(135deg,#11998e,#38ef7d)" title="Verde"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#f093fb,#f5576c)" style="background:linear-gradient(135deg,#f093fb,#f5576c)" title="Rosa"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#4facfe,#00f2fe)" style="background:linear-gradient(135deg,#4facfe,#00f2fe)" title="Cielo"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#43e97b,#38f9d7)" style="background:linear-gradient(135deg,#43e97b,#38f9d7)" title="Menta"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#fa709a,#fee140)" style="background:linear-gradient(135deg,#fa709a,#fee140)" title="Sunset"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#1e3c72,#2a5298)" style="background:linear-gradient(135deg,#1e3c72,#2a5298)" title="Noche azul"></div>
-          <div class="bg-swatch" data-g="linear-gradient(135deg,#134e5e,#71b280)" style="background:linear-gradient(135deg,#134e5e,#71b280)" title="Foresta"></div>
-        </div>
-      </div>
-      <!-- Imagen -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text)">🖼 Imagen de fondo</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="bg-img-file" accept="image/*" style="font-size:12px;flex:1" onchange="applyBgImage(this)"/>
-          <button class="btn btn-sm" onclick="applyBgUrl()">🔗 URL</button>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-          <label style="font-size:12px;color:var(--muted)">Opacidad overlay:</label>
-          <input type="range" id="bg-opacity" min="0" max="90" value="0" step="5" style="flex:1" oninput="updateBgOverlay(this.value)"/>
-          <span id="bg-opacity-val" style="font-size:12px;color:var(--muted);min-width:30px">0%</span>
-        </div>
-      </div>
-    </div>
-    <div class="modal-ftr" style="justify-content:space-between">
-      <button class="btn btn-sm btn-d" onclick="resetBg()">↺ Restablecer</button>
-      <button class="btn btn-p btn-sm" onclick="document.getElementById('bg-modal').classList.remove('open')">✓ Cerrar</button>
-    </div>
-  </div>
-</div>
-
-<style>
-.bg-swatch{width:36px;height:36px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
-.bg-swatch:hover{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.08);}
-.bg-swatch.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
-.main{transition:background .3s;}
-</style>
-
-<script>
-// ── FONDO ──────────────────────────────────────────────
-const BG_KEY='purga_bg_2026';
-function saveBgState(st){try{localStorage.setItem(BG_KEY,JSON.stringify(st));}catch(e){}}
-function loadBgState(){try{const d=localStorage.getItem(BG_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
-
-function applyBgToMain(st){
-  const main=document.querySelector('.main');
-  if(!main) return;
-  main.style.background='';
-  main.style.backgroundImage='';
-  main.style.backgroundSize='';
-  main.style.backgroundPosition='';
-  main.style.backgroundRepeat='';
-  if(st.type==='color'){main.style.background=st.value;}
-  else if(st.type==='gradient'){main.style.background=st.value;}
-  else if(st.type==='image'){
-    main.style.backgroundImage=`url('${st.value}')`;
-    main.style.backgroundSize='cover';
-    main.style.backgroundPosition='center';
-    main.style.backgroundRepeat='no-repeat';
-    // overlay
-    const opa=parseInt(st.opacity||0);
-    main.style.boxShadow='';
-    // use pseudo via a wrapper div
-    let ov=document.getElementById('bg-overlay');
-    if(!ov){ov=document.createElement('div');ov.id='bg-overlay';ov.style.cssText='position:fixed;top:0;left:220px;right:0;bottom:0;pointer-events:none;z-index:0;transition:background .3s;';document.body.appendChild(ov);}
-    ov.style.background=opa>0?`rgba(0,0,0,${opa/100})`:'transparent';
-  }
-}
-
-function applyBgColor(c){
-  const st={type:'color',value:c};
-  applyBgToMain(st);saveBgState(st);clearOverlay();
-  markSwatch('[data-v="'+c+'"]');
-}
-function applyBgGradient(g){
-  const st={type:'gradient',value:g};
-  applyBgToMain(st);saveBgState(st);clearOverlay();
-  markSwatch('[data-g="'+g+'"]');
-}
-function applyBgImage(input){
-  const file=input.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const st={type:'image',value:e.target.result,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
-    applyBgToMain(st);saveBgState(st);
-  };
-  reader.readAsDataURL(file);
-}
-function applyBgUrl(){
-  const url=prompt('Ingresa la URL de la imagen:');
-  if(!url) return;
-  const st={type:'image',value:url,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
-  applyBgToMain(st);saveBgState(st);
-}
-function updateBgOverlay(v){
-  document.getElementById('bg-opacity-val').textContent=v+'%';
-  const st=loadBgState();
-  if(st&&st.type==='image'){st.opacity=parseInt(v);applyBgToMain(st);saveBgState(st);}
-}
-function resetBg(){
-  const st={type:'color',value:'#F0F2F5'};
-  applyBgToMain(st);saveBgState(st);clearOverlay();
-  document.getElementById('bg-color-pick').value='#F0F2F5';
-  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
-}
-function clearOverlay(){const ov=document.getElementById('bg-overlay');if(ov)ov.style.background='transparent';}
-function markSwatch(sel){
-  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
-  const el=document.querySelector('.bg-swatch'+sel);if(el)el.classList.add('active');
-}
-
-// Init swatches click
-document.addEventListener('DOMContentLoaded',function(){
-  document.querySelectorAll('#bg-presets .bg-swatch').forEach(s=>{
-    s.addEventListener('click',function(){applyBgColor(this.dataset.v);document.getElementById('bg-color-pick').value=this.dataset.v;});
-  });
-  document.querySelectorAll('#bg-gradients .bg-swatch').forEach(s=>{
-    s.addEventListener('click',function(){applyBgGradient(this.dataset.g);});
-  });
-  // Restore saved bg
-  const st=loadBgState();
-  if(st){
-    applyBgToMain(st);
-    if(st.type==='color') document.getElementById('bg-color-pick').value=st.value;
-    if(st.type==='image'&&st.opacity) document.getElementById('bg-opacity').value=st.opacity;
-  }
-});
-</script>
-
-</body></html>`);
+`);
   w.document.close();
 }
 
@@ -2027,6 +1868,99 @@ function exportDataCSV(){
   </div>
 </div>
 
+
+<style>
+.bg-swatch{width:36px;height:36px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.bg-swatch:hover{border-color:#fff;box-shadow:0 0 0 2px var(--accent);transform:scale(1.08);}
+.bg-swatch.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
+.main{transition:background .3s;}
+</style>
+
+<script>
+// ── FONDO ──────────────────────────────────────────────
+const BG_KEY='purga_bg_2026';
+function saveBgState(st){try{localStorage.setItem(BG_KEY,JSON.stringify(st));}catch(e){}}
+function loadBgState(){try{const d=localStorage.getItem(BG_KEY);return d?JSON.parse(d):null;}catch(e){return null;}}
+
+function applyBgToMain(st){
+  const main=document.querySelector('.main');
+  if(!main) return;
+  main.style.background='';
+  main.style.backgroundImage='';
+  main.style.backgroundSize='';
+  main.style.backgroundPosition='';
+  main.style.backgroundRepeat='';
+  if(st.type==='color'){main.style.background=st.value;}
+  else if(st.type==='gradient'){main.style.background=st.value;}
+  else if(st.type==='image'){
+    main.style.backgroundImage="url('"+st.value+"')";
+    main.style.backgroundSize='cover';
+    main.style.backgroundPosition='center';
+    main.style.backgroundRepeat='no-repeat';
+    const opa=parseInt(st.opacity||0);
+    let ov=document.getElementById('bg-overlay');
+    if(!ov){ov=document.createElement('div');ov.id='bg-overlay';ov.style.cssText='position:fixed;top:0;left:220px;right:0;bottom:0;pointer-events:none;z-index:0;transition:background .3s;';document.body.appendChild(ov);}
+    ov.style.background=opa>0?'rgba(0,0,0,'+(opa/100)+')'  :'transparent';
+  }
+}
+
+function applyBgColor(c){
+  const st={type:'color',value:c};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-v="'+c+'"]');
+}
+function applyBgGradient(g){
+  const st={type:'gradient',value:g};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  markSwatch('[data-g="'+g+'"]');
+}
+function applyBgImage(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const st={type:'image',value:e.target.result,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+    applyBgToMain(st);saveBgState(st);
+  };
+  reader.readAsDataURL(file);
+}
+function applyBgUrl(){
+  const url=prompt('Ingresa la URL de la imagen:');
+  if(!url) return;
+  const st={type:'image',value:url,opacity:parseInt(document.getElementById('bg-opacity').value)||0};
+  applyBgToMain(st);saveBgState(st);
+}
+function updateBgOverlay(v){
+  document.getElementById('bg-opacity-val').textContent=v+'%';
+  const st=loadBgState();
+  if(st&&st.type==='image'){st.opacity=parseInt(v);applyBgToMain(st);saveBgState(st);}
+}
+function resetBg(){
+  const st={type:'color',value:'#F0F2F5'};
+  applyBgToMain(st);saveBgState(st);clearOverlay();
+  document.getElementById('bg-color-pick').value='#F0F2F5';
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+}
+function clearOverlay(){const ov=document.getElementById('bg-overlay');if(ov)ov.style.background='transparent';}
+function markSwatch(sel){
+  document.querySelectorAll('.bg-swatch').forEach(s=>s.classList.remove('active'));
+  const el=document.querySelector('.bg-swatch'+sel);if(el)el.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('#bg-presets .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgColor(this.dataset.v);document.getElementById('bg-color-pick').value=this.dataset.v;});
+  });
+  document.querySelectorAll('#bg-gradients .bg-swatch').forEach(s=>{
+    s.addEventListener('click',function(){applyBgGradient(this.dataset.g);});
+  });
+  const st=loadBgState();
+  if(st){
+    applyBgToMain(st);
+    if(st.type==='color') document.getElementById('bg-color-pick').value=st.value;
+    if(st.type==='image'&&st.opacity) document.getElementById('bg-opacity').value=st.opacity;
+  }
+});
+</script>
 
 </body>
 </html>
