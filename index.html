@@ -263,6 +263,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="paneles">◧ Paneles Malos</div>
       <div class="nav-item" data-mod="data">▤ Data</div>
       <div class="nav-item" data-mod="voucher">🖨 Voucher Ingreso</div>
+      <div class="nav-item" data-mod="comparar">⇄ Comparar Meses</div>
     </nav>
     <div class="sb-bottom">
       <div class="db-row"><div class="dot" id="db-dot"></div><span id="db-txt">Conectando...</span></div>
@@ -566,6 +567,60 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       </div>
     </div>
 
+
+    <!-- COMPARAR MESES -->
+    <div id="mod-comparar" class="module">
+      <div class="page-hdr">
+        <div><h2>⇄ Comparación de Meses</h2><p>Analiza la variación entre dos meses del año</p></div>
+      </div>
+      <div class="toolbar" style="flex-wrap:wrap;gap:14px">
+        <div class="cg">
+          <label>📅 Mes A</label>
+          <select id="cmp-mesA" style="font-weight:600;color:var(--accent)"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+          <select id="cmp-anioA"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div style="font-size:20px;color:var(--muted);padding:0 4px">⇄</div>
+        <div class="cg">
+          <label>📅 Mes B</label>
+          <select id="cmp-mesB" style="font-weight:600;color:var(--blue)"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+          <select id="cmp-anioB"><option value="2026">2026</option><option value="2025">2025</option></select>
+        </div>
+        <div class="vd"></div>
+        <div class="cg">
+          <label>Ver por</label>
+          <select id="cmp-tipo">
+            <option value="sku">SKU / Material</option>
+            <option value="cuenta">Cuenta</option>
+            <option value="maquina">Máquina</option>
+          </select>
+        </div>
+        <button class="btn btn-p btn-sm" onclick="loadComparar()">🔍 Comparar</button>
+        <button class="btn btn-sm" style="background:#F3F4F6;border-color:#D1D5DB" onclick="imprimirComparar()">🖨 Imprimir reporte</button>
+      </div>
+
+      <!-- KPI diff cards -->
+      <div id="cmp-kpis" style="display:none;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+          <div class="kpi green"><div class="kpi-lbl">Kg Purga — Mes A</div><div class="kpi-val" id="ck-kgA">—</div></div>
+          <div class="kpi blue"><div class="kpi-lbl">Kg Purga — Mes B</div><div class="kpi-val" id="ck-kgB">—</div></div>
+          <div class="kpi" id="ck-kgD-box"><div class="kpi-lbl">Diferencia Kg</div><div class="kpi-val" id="ck-kgD">—</div><div class="kpi-sub" id="ck-kgP">—</div></div>
+          <div class="kpi green"><div class="kpi-lbl">Costo MP — Mes A</div><div class="kpi-val" id="ck-mpA" style="font-size:18px">—</div></div>
+          <div class="kpi blue"><div class="kpi-lbl">Costo MP — Mes B</div><div class="kpi-val" id="ck-mpB" style="font-size:18px">—</div></div>
+          <div class="kpi" id="ck-mpD-box"><div class="kpi-lbl">Diferencia Costo</div><div class="kpi-val" id="ck-mpD" style="font-size:18px">—</div><div class="kpi-sub" id="ck-mpP">—</div></div>
+        </div>
+      </div>
+
+      <!-- Tabla comparativa -->
+      <div class="card tbl-wrap" id="cmp-wrap">
+        <div class="empty" id="cmp-hint">Selecciona dos meses y presiona Comparar</div>
+        <div class="loading" id="cmp-loading" style="display:none"><div class="spinner"></div>Cargando...</div>
+        <table id="cmp-tbl" style="display:none">
+          <thead id="cmp-thead"></thead>
+          <tbody id="cmp-body"></tbody>
+        </table>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -778,6 +833,7 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     if(mod==='paneles')  loadPaneles();
     if(mod==='data')     loadData();
     if(mod==='voucher')   loadVoucher();
+    if(mod==='comparar')  initComparar();
     if(mod==='ingreso')  loadRecientes();
   });
 });
@@ -2008,6 +2064,351 @@ function imprimirVoucher(){
     +'<div class="footer"><span>LB Logística · Sistema Purga 2026</span><span>Generado: '+new Date().toLocaleString('es-CL')+'</span></div>'
     +'</div>'
     +'</body></html>');
+  w.document.close();
+}
+
+// ════════════════════════════════════════════════════════
+// COMPARAR MESES
+// ════════════════════════════════════════════════════════
+let cmpStore = {A:{}, B:{}, labelA:'', labelB:'', tipo:'sku'};
+
+function initComparar(){
+  // Set sensible defaults: current month vs previous
+  const now = new Date();
+  const mesActual = now.getMonth()+1;
+  const mesAnterior = mesActual===1?12:mesActual-1;
+  const selA = document.getElementById('cmp-mesA');
+  const selB = document.getElementById('cmp-mesB');
+  if(selA && !selA.dataset.init){
+    selA.value = mesAnterior;
+    selB.value = mesActual;
+    selA.dataset.init='1';
+  }
+}
+
+async function loadComparar(){
+  if(!sb) return;
+  await loadMaestro();
+  const mesA  = parseInt(document.getElementById('cmp-mesA').value);
+  const anioA = parseInt(document.getElementById('cmp-anioA').value);
+  const mesB  = parseInt(document.getElementById('cmp-mesB').value);
+  const anioB = parseInt(document.getElementById('cmp-anioB').value);
+  const tipo  = document.getElementById('cmp-tipo').value;
+  const MNAMES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  cmpStore.labelA = MNAMES[mesA]+' '+anioA;
+  cmpStore.labelB = MNAMES[mesB]+' '+anioB;
+  cmpStore.tipo   = tipo;
+
+  document.getElementById('cmp-loading').style.display='flex';
+  document.getElementById('cmp-tbl').style.display='none';
+  document.getElementById('cmp-hint').style.display='none';
+  document.getElementById('cmp-kpis').style.display='none';
+
+  // Fetch both months
+  const [resA, resB] = await Promise.all([
+    sb.from('purgas').select('mp_sku,sku,kg,purga_color,kg_paneles_sin_frame,paneles_malos,cuenta,maquina')
+      .eq('anio',anioA).eq('mes',mesA).eq('tipo_panel','PURGA'),
+    sb.from('purgas').select('mp_sku,sku,kg,purga_color,kg_paneles_sin_frame,paneles_malos,cuenta,maquina')
+      .eq('anio',anioB).eq('mes',mesB).eq('tipo_panel','PURGA')
+  ]);
+
+  // Aggregate by chosen dimension
+  function aggregate(rows){
+    const map={};
+    (rows||[]).forEach(r=>{
+      const sku = r.mp_sku||r.sku||'19990';
+      let key;
+      if(tipo==='sku')     key=sku;
+      else if(tipo==='cuenta')   key=r.cuenta||'SIN CUENTA';
+      else                       key=r.maquina||'SIN MÁQUINA';
+      const kg  = parseFloat(r.kg)||0;
+      const kgB = kg+(parseFloat(r.purga_color)||0)+(parseFloat(r.kg_paneles_sin_frame)||0);
+      const pm  = parseFloat(r.paneles_malos)||0;
+      if(!map[key]) map[key]={kg:0,costo:0,pm:0,cPan:0,sku};
+      map[key].kg    += kg;
+      map[key].costo += kgB*gPrecio(sku);
+      map[key].pm    += pm;
+      map[key].cPan  += pm*gCPan(sku);
+    });
+    return map;
+  }
+
+  cmpStore.A = aggregate(resA.data);
+  cmpStore.B = aggregate(resB.data);
+
+  document.getElementById('cmp-loading').style.display='none';
+
+  // Render
+  renderComparar();
+}
+
+function renderComparar(){
+  const {A,B,labelA,labelB,tipo} = cmpStore;
+  const allKeys = [...new Set([...Object.keys(A),...Object.keys(B)])];
+
+  // Sort by B kg desc
+  allKeys.sort((a,b)=>((B[b]||{}).kg||0)-((A[a]||{}).kg||0));
+
+  // Totals
+  let totA={kg:0,costo:0,pm:0,cPan:0}, totB={kg:0,costo:0,pm:0,cPan:0};
+  allKeys.forEach(k=>{
+    const a=A[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const b=B[k]||{kg:0,costo:0,pm:0,cPan:0};
+    totA.kg+=a.kg; totA.costo+=a.costo; totA.pm+=a.pm; totA.cPan+=a.cPan;
+    totB.kg+=b.kg; totB.costo+=b.costo; totB.pm+=b.pm; totB.cPan+=b.cPan;
+  });
+
+  // KPI cards
+  function diffClass(d){ return d>0?'green':d<0?'red':''; }
+  function pct(a,b){ return a===0?null:Math.round(((b-a)/a)*100); }
+  function pctHtml(a,b){
+    const p=pct(a,b);
+    if(p===null) return '<span style="color:var(--muted)">—</span>';
+    const arr=p>0?'▲':p<0?'▼':'●';
+    const col=p>0?'#DC2626':p<0?'#166534':'var(--muted)';
+    return '<span style="color:'+col+';font-weight:700">'+arr+' '+(p>0?'+':'')+p+'%</span>';
+  }
+
+  const dKg=totB.kg-totA.kg, dMP=totB.costo-totA.costo;
+  document.getElementById('ck-kgA').textContent  = fmtN(totA.kg)+' kg';
+  document.getElementById('ck-kgB').textContent  = fmtN(totB.kg)+' kg';
+  document.getElementById('ck-kgD').textContent  = (dKg>=0?'+':'')+fmtN(dKg)+' kg';
+  document.getElementById('ck-kgD').style.color  = dKg>0?'#DC2626':dKg<0?'#166534':'var(--muted)';
+  document.getElementById('ck-kgD-box').className= 'kpi '+(dKg>0?'red':dKg<0?'green':'');
+  document.getElementById('ck-kgP').innerHTML    = pctHtml(totA.kg,totB.kg);
+  document.getElementById('ck-mpA').textContent  = '$'+fmtM(totA.costo);
+  document.getElementById('ck-mpB').textContent  = '$'+fmtM(totB.costo);
+  document.getElementById('ck-mpD').textContent  = (dMP>=0?'+':'')+'$'+fmtM(Math.abs(dMP));
+  document.getElementById('ck-mpD').style.color  = dMP>0?'#DC2626':dMP<0?'#166534':'var(--muted)';
+  document.getElementById('ck-mpD-box').className= 'kpi '+(dMP>0?'red':dMP<0?'green':'');
+  document.getElementById('ck-mpP').innerHTML    = pctHtml(totA.costo,totB.costo);
+  document.getElementById('cmp-kpis').style.display='';
+
+  // Table header
+  document.getElementById('cmp-thead').innerHTML =
+    '<tr>'
+    +'<th style="text-align:left;min-width:160px;background:#1E3A2F">'+(tipo==='sku'?'SKU / MATERIAL':tipo==='cuenta'?'CUENTA':'MÁQUINA')+'</th>'
+    +'<th colspan="4" style="text-align:center;background:#166534;color:#fff;padding:7px">📅 '+labelA+'</th>'
+    +'<th colspan="4" style="text-align:center;background:#1D4ED8;color:#fff;padding:7px">📅 '+labelB+'</th>'
+    +'<th colspan="4" style="text-align:center;background:#374151;color:#fff;padding:7px">⇄ DIFERENCIA (B − A)</th>'
+    +'</tr>'
+    +'<tr>'
+    +'<th style="background:#2D4A3E;color:#e5f5ec;padding:7px;text-align:left"></th>'
+    // Mes A
+    +'<th style="background:#14532D;color:#BBF7D0;padding:7px;text-align:right;font-size:10.5px">KG PURGA</th>'
+    +'<th style="background:#14532D;color:#BBF7D0;padding:7px;text-align:right;font-size:10.5px">COSTO MP</th>'
+    +'<th style="background:#14532D;color:#BBF7D0;padding:7px;text-align:right;font-size:10.5px">PAN MALOS</th>'
+    +'<th style="background:#14532D;color:#BBF7D0;padding:7px;text-align:right;font-size:10.5px">COSTO PAN</th>'
+    // Mes B
+    +'<th style="background:#1E3A8A;color:#BFDBFE;padding:7px;text-align:right;font-size:10.5px">KG PURGA</th>'
+    +'<th style="background:#1E3A8A;color:#BFDBFE;padding:7px;text-align:right;font-size:10.5px">COSTO MP</th>'
+    +'<th style="background:#1E3A8A;color:#BFDBFE;padding:7px;text-align:right;font-size:10.5px">PAN MALOS</th>'
+    +'<th style="background:#1E3A8A;color:#BFDBFE;padding:7px;text-align:right;font-size:10.5px">COSTO PAN</th>'
+    // Diff
+    +'<th style="background:#1F2937;color:#D1D5DB;padding:7px;text-align:right;font-size:10.5px">Δ KG</th>'
+    +'<th style="background:#1F2937;color:#D1D5DB;padding:7px;text-align:right;font-size:10.5px">Δ COSTO MP</th>'
+    +'<th style="background:#1F2937;color:#D1D5DB;padding:7px;text-align:right;font-size:10.5px">Δ PAN MALOS</th>'
+    +'<th style="background:#1F2937;color:#D1D5DB;padding:7px;text-align:right;font-size:10.5px">VAR %</th>'
+    +'</tr>';
+
+  // Rows
+  function varHtml(a,b){
+    const p=pct(a,b);
+    if(p===null) return '<span style="color:var(--muted)">—</span>';
+    const arr=p>0?'▲':p<0?'▼':'●';
+    const col=p>0?'#DC2626':p<0?'#15803D':'var(--muted)';
+    const bg =p>0?'#FEE2E2':p<0?'#DCFCE7':'transparent';
+    return '<span style="color:'+col+';font-weight:700;background:'+bg+';padding:2px 5px;border-radius:4px">'+arr+' '+(p>0?'+':'')+p+'%</span>';
+  }
+  function diffCell(a,b,fmt){
+    const d=b-a;
+    const col=d>0?'#DC2626':d<0?'#15803D':'var(--muted)';
+    return '<td class="tr" style="color:'+col+';font-weight:600">'+(d>=0?'+':'')+fmt(d)+'</td>';
+  }
+
+  let rows='';
+  allKeys.forEach((k,idx)=>{
+    const a=A[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const b=B[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const label = tipo==='sku' ? gDesc(k)+' <span style="font-size:10px;color:var(--muted)">('+k+')</span>' : k;
+    const bg = idx%2===0?'#fff':'#F9FAFB';
+    rows += '<tr style="background:'+bg+'">'
+      +'<td style="font-size:11.5px;padding:7px 10px">'+label+'</td>'
+      // A
+      +'<td class="tr" style="color:#166534;font-weight:'+(a.kg>0?600:400)+'">'+( a.kg>0?fmtN(a.kg):'—' )+'</td>'
+      +'<td class="tr" style="color:#166534">'+( a.costo>0?'$'+fmtM(a.costo):'—' )+'</td>'
+      +'<td class="tr" style="color:'+(a.pm>0?'#DC2626':'var(--muted)')+'">'+( a.pm>0?fmtN(a.pm):'—' )+'</td>'
+      +'<td class="tr" style="color:#92400E">'+( a.cPan>0?'$'+fmtM0(a.cPan):'—' )+'</td>'
+      // B
+      +'<td class="tr" style="color:#1D4ED8;font-weight:'+(b.kg>0?600:400)+'">'+( b.kg>0?fmtN(b.kg):'—' )+'</td>'
+      +'<td class="tr" style="color:#1D4ED8">'+( b.costo>0?'$'+fmtM(b.costo):'—' )+'</td>'
+      +'<td class="tr" style="color:'+(b.pm>0?'#DC2626':'var(--muted)')+'">'+( b.pm>0?fmtN(b.pm):'—' )+'</td>'
+      +'<td class="tr" style="color:#92400E">'+( b.cPan>0?'$'+fmtM0(b.cPan):'—' )+'</td>'
+      // Diff
+      +diffCell(a.kg,b.kg,fmtN)
+      +diffCell(a.costo,b.costo,v=>'$'+fmtM(Math.abs(v)))
+      +diffCell(a.pm,b.pm,fmtN)
+      +'<td class="tr">'+varHtml(a.kg,b.kg)+'</td>'
+      +'</tr>';
+  });
+
+  // Totals row
+  rows += '<tr style="background:#FEF9C3;font-weight:700;border-top:2px solid #FDE68A">'
+    +'<td style="padding:8px 10px;color:var(--gold)">TOTAL</td>'
+    +'<td class="tr" style="color:#166534">'+fmtN(totA.kg)+'</td>'
+    +'<td class="tr" style="color:#166534">$'+fmtM(totA.costo)+'</td>'
+    +'<td class="tr" style="color:#DC2626">'+fmtN(totA.pm)+'</td>'
+    +'<td class="tr" style="color:#92400E">$'+fmtM0(totA.cPan)+'</td>'
+    +'<td class="tr" style="color:#1D4ED8">'+fmtN(totB.kg)+'</td>'
+    +'<td class="tr" style="color:#1D4ED8">$'+fmtM(totB.costo)+'</td>'
+    +'<td class="tr" style="color:#DC2626">'+fmtN(totB.pm)+'</td>'
+    +'<td class="tr" style="color:#92400E">$'+fmtM0(totB.cPan)+'</td>'
+    +diffCell(totA.kg,totB.kg,fmtN)
+    +diffCell(totA.costo,totB.costo,v=>'$'+fmtM(Math.abs(v)))
+    +diffCell(totA.pm,totB.pm,fmtN)
+    +'<td class="tr">'+varHtml(totA.kg,totB.kg)+'</td>'
+    +'</tr>';
+
+  document.getElementById('cmp-body').innerHTML = rows;
+  document.getElementById('cmp-tbl').style.display = 'table';
+}
+
+function imprimirComparar(){
+  const {A,B,labelA,labelB,tipo} = cmpStore;
+  if(!Object.keys(A).length && !Object.keys(B).length){
+    alert('Primero realiza una comparación'); return;
+  }
+
+  const allKeys = [...new Set([...Object.keys(A),...Object.keys(B)])];
+  allKeys.sort((a,b)=>((B[b]||{}).kg||0)-((A[a]||{}).kg||0));
+
+  let totA={kg:0,costo:0,pm:0,cPan:0}, totB={kg:0,costo:0,pm:0,cPan:0};
+  allKeys.forEach(k=>{
+    const a=A[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const b=B[k]||{kg:0,costo:0,pm:0,cPan:0};
+    totA.kg+=a.kg; totA.costo+=a.costo; totA.pm+=a.pm; totA.cPan+=a.cPan;
+    totB.kg+=b.kg; totB.costo+=b.costo; totB.pm+=b.pm; totB.cPan+=b.cPan;
+  });
+
+  function pct(a,b){ return a===0?null:Math.round(((b-a)/a)*100); }
+  function varStr(a,b){
+    const p=pct(a,b);
+    if(p===null) return '—';
+    return (p>0?'▲ +':'▼ ')+p+'%';
+  }
+  function varColor(a,b){
+    const p=pct(a,b);
+    if(p===null||p===0) return '#6B7280';
+    return p>0?'#DC2626':'#15803D';
+  }
+  function df(a,b){ const d=b-a; return (d>=0?'+':'')+fmtN(d); }
+  function dc(a,b){ const d=b-a; return (d>=0?'+$':'-$')+fmtM(Math.abs(d)); }
+
+  const dKg=totB.kg-totA.kg, dMP=totB.costo-totA.costo;
+  const pKg=pct(totA.kg,totB.kg), pMP=pct(totA.costo,totB.costo);
+
+  const rowsHtml = allKeys.map((k,idx)=>{
+    const a=A[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const b=B[k]||{kg:0,costo:0,pm:0,cPan:0};
+    const label = tipo==='sku'?gDesc(k)+' ('+k+')':k;
+    const bg = idx%2===0?'#fff':'#F9FAFB';
+    const dkg=b.kg-a.kg, dct=b.costo-a.costo, dpm=b.pm-a.pm;
+    const pc=pct(a.kg,b.kg);
+    return '<tr style="background:'+bg+'">'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;font-size:9.5px">'+label+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:#166534;font-weight:'+(a.kg>0?600:400)+'">'+( a.kg>0?fmtN(a.kg):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:#166534">'+( a.costo>0?'$'+fmtM(a.costo):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:'+(a.pm>0?'#DC2626':'#9CA3AF')+'">'+( a.pm>0?fmtN(a.pm):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:#1D4ED8;font-weight:'+(b.kg>0?600:400)+'">'+( b.kg>0?fmtN(b.kg):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:#1D4ED8">'+( b.costo>0?'$'+fmtM(b.costo):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:'+(b.pm>0?'#DC2626':'#9CA3AF')+'">'+( b.pm>0?fmtN(b.pm):'—' )+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:'+(dkg>=0?'#DC2626':'#15803D')+';font-weight:700">'+df(a.kg,b.kg)+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:right;color:'+(dct>=0?'#DC2626':'#15803D')+';font-weight:700">'+dc(a.costo,b.costo)+'</td>'
+      +'<td style="border:1px solid #e5e7eb;padding:5px 7px;text-align:center;font-weight:700;color:'+varColor(a.kg,b.kg)+'">'+varStr(a.kg,b.kg)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  const w = window.open('','_blank','width=1100,height=820');
+  w.document.write('<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    +'<title>Comparación '+labelA+' vs '+labelB+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{font-family:Arial,sans-serif;font-size:10.5px;color:#111;background:#fff;}'
+    +'.page{padding:20px 24px;}'
+    +'.no-print{background:#1E3A2F;padding:10px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:99;}'
+    +'.no-print h2{color:#fff;font-size:13px;flex:1;}'
+    +'.btn-pdf{padding:7px 18px;background:#16A34A;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;}'
+    +'.doc-header{display:flex;align-items:stretch;margin-bottom:16px;border:2px solid #1E3A2F;border-radius:6px;overflow:hidden;}'
+    +'.hdr-logo{background:#1E3A2F;color:#fff;padding:12px 18px;display:flex;flex-direction:column;justify-content:center;min-width:180px;}'
+    +'.hdr-logo h1{font-size:13px;font-weight:700;}'
+    +'.hdr-logo p{font-size:10px;opacity:.7;margin-top:2px;}'
+    +'.hdr-meta{flex:1;padding:12px 16px;background:#F0FDF4;display:grid;grid-template-columns:repeat(6,1fr);gap:10px;align-items:center;}'
+    +'.meta-item{display:flex;flex-direction:column;gap:2px;}'
+    +'.meta-label{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:#6B7280;font-weight:600;}'
+    +'.meta-value{font-size:11px;font-weight:700;color:#1E3A2F;}'
+    +'.legend{display:flex;gap:20px;margin-bottom:10px;padding:8px 12px;background:#F9FAFB;border-radius:6px;border:1px solid #e5e7eb;font-size:11px;}'
+    +'.leg-item{display:flex;align-items:center;gap:6px;}'
+    +'.leg-dot{width:14px;height:14px;border-radius:3px;}'
+    +'table{width:100%;border-collapse:collapse;font-size:9px;}'
+    +'.th-a{background:#166534;color:#BBF7D0;padding:6px 6px;text-align:center;border:1px solid rgba(255,255,255,0.1);font-size:9px;font-weight:700;}'
+    +'.th-b{background:#1E3A8A;color:#BFDBFE;padding:6px 6px;text-align:center;border:1px solid rgba(255,255,255,0.1);font-size:9px;font-weight:700;}'
+    +'.th-d{background:#374151;color:#D1D5DB;padding:6px 6px;text-align:center;border:1px solid rgba(255,255,255,0.1);font-size:9px;font-weight:700;}'
+    +'.th-lbl{background:#1E3A2F;color:#fff;padding:6px 8px;text-align:left;border:1px solid rgba(255,255,255,0.1);font-size:9px;font-weight:700;}'
+    +'.total-row td{background:#FEF9C3!important;font-weight:700;border:1px solid #FDE68A;padding:6px;}'
+    +'.footer{margin-top:14px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:8.5px;color:#9CA3AF;display:flex;justify-content:space-between;}'
+    +'* { -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important; }'
+    +'@media print{.no-print{display:none!important;}.page{padding:10px 14px;}@page{size:A4 landscape;margin:10mm;}}'
+    +'</style></head><body>'
+    +'<div class="no-print"><h2>⇄ Comparación: '+labelA+' vs '+labelB+'</h2>'
+    +'<button class="btn-pdf" onclick="window.print()">🖨 Imprimir / Guardar PDF</button></div>'
+    +'<div class="page">'
+    +'<div class="doc-header">'
+    +'<div class="hdr-logo"><h1>🌿 Sistema Purga</h1><p>LB Logística · 2026</p></div>'
+    +'<div class="hdr-meta">'
+    +'<div class="meta-item"><span class="meta-label">Reporte</span><span class="meta-value">Comparación de Meses</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Mes A</span><span class="meta-value" style="color:#166534">'+labelA+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Mes B</span><span class="meta-value" style="color:#1D4ED8">'+labelB+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Δ Kg Purga</span><span class="meta-value" style="color:'+(dKg>=0?'#DC2626':'#15803D')+'">'+(dKg>=0?'+':'')+fmtN(dKg)+' kg</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Δ Costo MP</span><span class="meta-value" style="color:'+(dMP>=0?'#DC2626':'#15803D')+'">'+(dMP>=0?'+':'-')+'$'+fmtM(Math.abs(dMP))+'</span></div>'
+    +'<div class="meta-item"><span class="meta-label">Variación Kg</span><span class="meta-value" style="color:'+(pKg!==null&&pKg>=0?'#DC2626':'#15803D')+'">'+(pKg!==null?(pKg>=0?'▲ +':'▼ ')+pKg+'%':'—')+'</span></div>'
+    +'</div></div>'
+    +'<div class="legend">'
+    +'<div class="leg-item"><div class="leg-dot" style="background:#166534"></div><span>Mes A — '+labelA+'</span></div>'
+    +'<div class="leg-item"><div class="leg-dot" style="background:#1D4ED8"></div><span>Mes B — '+labelB+'</span></div>'
+    +'<div class="leg-item"><div class="leg-dot" style="background:#DC2626"></div><span>▲ Aumento</span></div>'
+    +'<div class="leg-item"><div class="leg-dot" style="background:#15803D"></div><span>▼ Disminución</span></div>'
+    +'</div>'
+    +'<table>'
+    +'<thead>'
+    +'<tr>'
+    +'<th class="th-lbl" rowspan="2" style="min-width:160px">'+(tipo==='sku'?'MATERIAL / SKU':tipo==='cuenta'?'CUENTA':'MÁQUINA')+'</th>'
+    +'<th colspan="3" class="th-a">📅 '+labelA+'</th>'
+    +'<th colspan="3" class="th-b">📅 '+labelB+'</th>'
+    +'<th colspan="3" class="th-d">⇄ DIFERENCIA (B − A)</th>'
+    +'</tr>'
+    +'<tr>'
+    +'<th class="th-a">KG PURGA</th><th class="th-a">COSTO MP</th><th class="th-a">PAN MALOS</th>'
+    +'<th class="th-b">KG PURGA</th><th class="th-b">COSTO MP</th><th class="th-b">PAN MALOS</th>'
+    +'<th class="th-d">Δ KG</th><th class="th-d">Δ COSTO</th><th class="th-d">VAR %</th>'
+    +'</tr>'
+    +'</thead>'
+    +'<tbody>'
+    +rowsHtml
+    +'<tr class="total-row">'
+    +'<td style="border:1px solid #FDE68A;padding:6px 8px;color:var(--gold)">TOTAL</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#166534">'+fmtN(totA.kg)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#166534">$'+fmtM(totA.costo)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#DC2626">'+fmtN(totA.pm)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#1D4ED8">'+fmtN(totB.kg)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#1D4ED8">$'+fmtM(totB.costo)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:#DC2626">'+fmtN(totB.pm)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:'+(dKg>=0?'#DC2626':'#15803D')+';font-weight:700">'+(dKg>=0?'+':'')+fmtN(dKg)+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:right;color:'+(dMP>=0?'#DC2626':'#15803D')+';font-weight:700">'+(dMP>=0?'+$':'-$')+fmtM(Math.abs(dMP))+'</td>'
+    +'<td style="border:1px solid #FDE68A;padding:6px;text-align:center;font-weight:700;color:'+(pKg!==null&&pKg>=0?'#DC2626':'#15803D')+'">'+(pKg!==null?(pKg>=0?'▲ +':'▼ ')+pKg+'%':'—')+'</td>'
+    +'</tr>'
+    +'</tbody></table>'
+    +'<div class="footer"><span>LB Logística · Sistema Purga 2026</span><span>Generado: '+new Date().toLocaleString('es-CL')+'</span></div>'
+    +'</div></body></html>');
   w.document.close();
 }
 
