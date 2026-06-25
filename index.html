@@ -1151,24 +1151,24 @@ function imprimirIngreso(){
     const cc = ctaColor[r.cuenta]||'#374151';
     const cb = ctaBg[r.cuenta]||'#F3F4F6';
     const saved = r.estado.includes('Guardado');
-    return `<tr style="background:${rowBg}">
-  <td style="background:${cb};color:${cc};font-weight:700;border:1px solid #d1d5db;padding:6px 7px;white-space:nowrap">${r.cuenta}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;font-weight:600;color:#1F2937">${r.maquina}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.fecha}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:${(parseFloat(r.kg)||0)>0?'700':'400'};color:${(parseFloat(r.kg)||0)>0?'#166534':'#9CA3AF'}">${fmt(r.kg)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.color)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.color)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.psf)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.psf)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.kgsf)||0)>0?'#1D4ED8':'#9CA3AF'}">${fmt(r.kgsf)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:${(parseFloat(r.pmlos)||0)>0?'700':'400'};color:${(parseFloat(r.pmlos)||0)>0?'#DC2626':'#9CA3AF'}">${fmt(r.pmlos)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:${(parseFloat(r.kgpan)||0)>0?'#92400E':'#9CA3AF'}">${fmt(r.kgpan)}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.medida}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.altura}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.slot}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">${r.of}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-size:9px;background:#F0F9FF;color:#1D4ED8;font-weight:600">${r.sku}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;font-size:9px;color:#6B7280;max-width:130px">${r.mpDesc}</td>
-  <td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-weight:700;color:${saved?'#166534':'#B45309'};font-size:9.5px">${r.estado}</td>
-</tr>`;
+    return '<tr style="background:'+rowBg+'">'
+      +'<td style="background:'+cb+';color:'+cc+';font-weight:700;border:1px solid #d1d5db;padding:6px 7px;white-space:nowrap">'+r.cuenta+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;font-weight:600;color:#1F2937">'+r.maquina+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">'+r.fecha+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:'+((parseFloat(r.kg)||0)>0?'700':'400')+';color:'+((parseFloat(r.kg)||0)>0?'#166534':'#9CA3AF')+'">'+fmt(r.kg)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:'+((parseFloat(r.color)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+fmt(r.color)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:'+((parseFloat(r.psf)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+fmt(r.psf)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:'+((parseFloat(r.kgsf)||0)>0?'#1D4ED8':'#9CA3AF')+'">'+fmt(r.kgsf)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;font-weight:'+((parseFloat(r.pmlos)||0)>0?'700':'400')+';color:'+((parseFloat(r.pmlos)||0)>0?'#DC2626':'#9CA3AF')+'">'+fmt(r.pmlos)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:right;color:'+((parseFloat(r.kgpan)||0)>0?'#92400E':'#9CA3AF')+'">'+fmt(r.kgpan)+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">'+r.medida+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">'+r.altura+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">'+r.slot+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;color:#374151">'+r.of+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-size:9px;background:#F0F9FF;color:#1D4ED8;font-weight:600">'+r.sku+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;font-size:9px;color:#6B7280;max-width:130px">'+r.mpDesc+'</td>'
+      +'<td style="border:1px solid #d1d5db;padding:6px 7px;text-align:center;font-weight:700;color:'+(saved?'#166534':'#B45309')+';font-size:9.5px">'+r.estado+'</td>'
+      +'</tr>';
   }).join('');
 
   const w = window.open('','_blank','width=1200,height=820');
