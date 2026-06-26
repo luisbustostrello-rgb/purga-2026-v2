@@ -2140,7 +2140,7 @@ async function loadComparar(){
   const tA=totals(cmpStore.sku.A), tB=totals(cmpStore.sku.B);
   const dKg=tB.kg-tA.kg, dMP=tB.costo-tA.costo;
   function pct(a,b){return a===0?null:Math.round(((b-a)/a)*100);}
-  function pctHtml(a,b){const p=pct(a,b);if(p===null)return'<span style="color:var(--muted)">—</span>';const col=p>0?'#DC2626':'#15803D';return'<span style="color:'+col+';font-weight:700">''+(p>0?'▲ +':'▼ ')+p+'%</span>';}
+  function pctHtml(a,b){const p=pct(a,b);if(p===null)return'<span style="color:var(--muted)">—</span>';const col=p>0?'#DC2626':'#15803D';return'<span style="color:'+col+';font-weight:700">'+(p>0?'▲ +':'▼ ')+p+'%</span>';}
   document.getElementById('ck-kgA').textContent=fmtN(tA.kg)+' kg';
   document.getElementById('ck-kgB').textContent=fmtN(tB.kg)+' kg';
   document.getElementById('ck-kgD').textContent=(dKg>=0?'+':'')+fmtN(dKg)+' kg';
@@ -2247,14 +2247,14 @@ function renderCmpTable(tipo, tituloLabel, labelFn){
     const obs=genObservacion(k,a,b,labelA,labelB);
     rows+='<tr style="background:'+bg+'">';
     rows+='<td style="font-size:11px;padding:7px 10px;font-weight:500">'+labelFn(k)+'</td>';
-    rows+='<td class="tr" style="color:#166534;font-weight:'+(a.kg>0?600:400)+'">''+(a.kg>0?fmtN(a.kg):'—')+'</td>';
-    rows+='<td class="tr" style="color:#166534">''+(a.costo>0?'$'+fmtM(a.costo):'—')+'</td>';
-    rows+='<td class="tr" style="color:'+(a.pm>0?'#DC2626':'var(--muted)')+'">''+(a.pm>0?fmtN(a.pm):'—')+'</td>';
-    rows+='<td class="tr" style="color:#92400E">''+(a.cPan>0?'$'+fmtM0(a.cPan):'—')+'</td>';
-    rows+='<td class="tr" style="color:#1D4ED8;font-weight:'+(b.kg>0?600:400)+'">''+(b.kg>0?fmtN(b.kg):'—')+'</td>';
-    rows+='<td class="tr" style="color:#1D4ED8">''+(b.costo>0?'$'+fmtM(b.costo):'—')+'</td>';
-    rows+='<td class="tr" style="color:'+(b.pm>0?'#DC2626':'var(--muted)')+'">''+(b.pm>0?fmtN(b.pm):'—')+'</td>';
-    rows+='<td class="tr" style="color:#92400E">''+(b.cPan>0?'$'+fmtM0(b.cPan):'—')+'</td>';
+    rows+='<td class="tr" style="color:#166534;font-weight:'+(a.kg>0?600:400)+'">'+(a.kg>0?fmtN(a.kg):'—')+'</td>';
+    rows+='<td class="tr" style="color:#166534">'+(a.costo>0?'$'+fmtM(a.costo):'—')+'</td>';
+    rows+='<td class="tr" style="color:'+(a.pm>0?'#DC2626':'var(--muted)')+'">'+(a.pm>0?fmtN(a.pm):'—')+'</td>';
+    rows+='<td class="tr" style="color:#92400E">'+(a.cPan>0?'$'+fmtM0(a.cPan):'—')+'</td>';
+    rows+='<td class="tr" style="color:#1D4ED8;font-weight:'+(b.kg>0?600:400)+'">'+(b.kg>0?fmtN(b.kg):'—')+'</td>';
+    rows+='<td class="tr" style="color:#1D4ED8">'+(b.costo>0?'$'+fmtM(b.costo):'—')+'</td>';
+    rows+='<td class="tr" style="color:'+(b.pm>0?'#DC2626':'var(--muted)')+'">'+(b.pm>0?fmtN(b.pm):'—')+'</td>';
+    rows+='<td class="tr" style="color:#92400E">'+(b.cPan>0?'$'+fmtM0(b.cPan):'—')+'</td>';
     rows+=dc(a.kg,b.kg)+dcc(a.costo,b.costo);
     rows+='<td class="tr">'+varHtml(a.kg,b.kg)+'</td>';
     rows+='<td style="font-size:10.5px;color:#5B21B6;padding:6px 10px;max-width:280px;line-height:1.4">'+obs+'</td>';
@@ -2366,12 +2366,12 @@ function imprimirComparar(){
       const obs=genObservacion(k,a,b,labelA,labelB);
       return '<tr style="background:'+bg+'">'+
         '<td style="border:1px solid #e5e7eb;padding:4px 6px;font-size:9px">'+labelFn(k)+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#166534;font-size:9px">''+(a.kg>0?fmtN(a.kg):'—')+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#166534;font-size:9px">''+(a.costo>0?'$'+fmtM(a.costo):'—')+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:'+(a.pm>0?'#DC2626':'#9CA3AF')+';font-size:9px">''+(a.pm>0?fmtN(a.pm):'—')+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#1D4ED8;font-size:9px">''+(b.kg>0?fmtN(b.kg):'—')+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#1D4ED8;font-size:9px">''+(b.costo>0?'$'+fmtM(b.costo):'—')+'</td>'+
-        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:'+(b.pm>0?'#DC2626':'#9CA3AF')+';font-size:9px">''+(b.pm>0?fmtN(b.pm):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#166534;font-size:9px">'+(a.kg>0?fmtN(a.kg):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#166534;font-size:9px">'+(a.costo>0?'$'+fmtM(a.costo):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:'+(a.pm>0?'#DC2626':'#9CA3AF')+';font-size:9px">'+(a.pm>0?fmtN(a.pm):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#1D4ED8;font-size:9px">'+(b.kg>0?fmtN(b.kg):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:#1D4ED8;font-size:9px">'+(b.costo>0?'$'+fmtM(b.costo):'—')+'</td>'+
+        '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:'+(b.pm>0?'#DC2626':'#9CA3AF')+';font-size:9px">'+(b.pm>0?fmtN(b.pm):'—')+'</td>'+
         '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:right;color:'+(dkg>=0?'#DC2626':'#15803D')+';font-weight:700;font-size:9px">'+(dkg>=0?'+':'')+fmtN(dkg)+'</td>'+
         '<td style="border:1px solid #e5e7eb;padding:4px 6px;text-align:center;font-weight:700;font-size:9px;color:'+(p!==null&&p>=0?'#DC2626':'#15803D')+'">'+(p!==null?(p>=0?'▲ +':'▼ ')+p+'%':'—')+'</td>'+
         '<td style="border:1px solid #e5e7eb;padding:4px 8px;font-size:8.5px;color:#5B21B6;max-width:220px;line-height:1.35">'+obs+'</td>'+
