@@ -766,10 +766,8 @@ const CFG = {
   key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnamJieHR6aWVseWV4eGh4aXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTc0NzQsImV4cCI6MjA5NjE5MzQ3NH0.4nFWFTZrmA0fGAT6HBMoM7ctiQrEntCnptDc843uMUU'
 };
 
-const USERS = {
-  admin:      { pass: 'purga2026', role: 'admin',  name: 'Administrador' },
-  visualizar: { pass: 'ver2026',   role: 'viewer', name: 'Visualizador'  }
-};
+// Credenciales gestionadas en Supabase (tabla: app_users)
+// No hay usuarios ni contraseñas en este archivo
 
 // ════════════════════════════════════════════════════════
 // CONSTANTES
@@ -855,22 +853,67 @@ document.getElementById('login-btn').addEventListener('click', doLogin);
 document.getElementById('l-pass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
 document.getElementById('l-user').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
 
-function doLogin(){
-  const user = document.getElementById('l-user').value.trim().toLowerCase();
-  const pass = document.getElementById('l-pass').value;
-  const errEl = document.getElementById('login-err');
-  if(USERS[user] && USERS[user].pass===pass){
-    currentUser = {...USERS[user], username:user};
+async function doLogin(){
+  const user   = document.getElementById('l-user').value.trim().toLowerCase();
+  const pass   = document.getElementById('l-pass').value;
+  const errEl  = document.getElementById('login-err');
+  const btn    = document.getElementById('login-btn');
+
+  if(!user || !pass){ errEl.textContent='Ingresa usuario y contraseña'; errEl.classList.add('show'); return; }
+
+  btn.textContent='Verificando...'; btn.disabled=true;
+
+  try {
+    // Supabase client needed for auth query — create a temporary one
+    const _sb = supabase.createClient(CFG.url, CFG.key);
+
+    // Hash the password with SHA-256 before comparing
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pass);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+
+    // Query app_users table
+    const { data: rows, error } = await _sb
+      .from('app_users')
+      .select('username, role, name, pass_hash')
+      .eq('username', user)
+      .eq('activo', true)
+      .single();
+
+    if(error || !rows){
+      errEl.textContent='Usuario o contraseña incorrectos';
+      errEl.classList.add('show');
+      btn.textContent='Ingresar'; btn.disabled=false;
+      document.getElementById('l-pass').value='';
+      return;
+    }
+
+    // Compare hash
+    if(rows.pass_hash !== hashHex){
+      errEl.textContent='Usuario o contraseña incorrectos';
+      errEl.classList.add('show');
+      btn.textContent='Ingresar'; btn.disabled=false;
+      document.getElementById('l-pass').value='';
+      return;
+    }
+
+    // Login OK
+    currentUser = { role: rows.role, name: rows.name, username: rows.username };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('visible');
     document.getElementById('u-name').textContent = currentUser.name;
     document.getElementById('u-role').textContent = isAdmin()?'Admin':'Solo lectura';
     errEl.classList.remove('show');
+    btn.textContent='Ingresar'; btn.disabled=false;
     applyRole();
     initApp();
-  } else {
+
+  } catch(e) {
+    errEl.textContent='Error de conexión: '+e.message;
     errEl.classList.add('show');
-    document.getElementById('l-pass').value='';
+    btn.textContent='Ingresar'; btn.disabled=false;
   }
 }
 
