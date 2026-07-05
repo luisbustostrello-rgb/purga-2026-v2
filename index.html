@@ -819,7 +819,12 @@ let dataEditSku = null;
 // ════════════════════════════════════════════════════════
 function fmtN(v){ const n=parseFloat(v)||0; return n%1===0?n.toFixed(0):n.toFixed(1); }
 function fmtM(v){ return (parseFloat(v)||0).toLocaleString('es-CL',{minimumFractionDigits:3,maximumFractionDigits:3}); }
-function fmtM0(v){ return (parseFloat(v)||0).toLocaleString('es-CL',{maximumFractionDigits:0}); }
+function fmtM0(v){
+  const n=Math.round(Math.abs(parseFloat(v)||0));
+  const s=n.toString(); let r='';
+  for(let i=0;i<s.length;i++){if(i>0&&(s.length-i)%3===0)r+='.';r+=s[i];}
+  return (parseFloat(v)<0?'-':'')+r;
+}
 function $v(v){ return (parseFloat(v)||0)>0?'$'+fmtM(v):'—'; }
 function nv(v){ return (parseFloat(v)||0)>0?fmtN(v):'—'; }
 function sv(v){ return v||'—'; }
@@ -1049,7 +1054,15 @@ async function loadDash(){
 
   // KPIs — números completos con separador de miles
   function fmtFull(v){
-    return Math.round(v).toLocaleString('es-CL');
+    // Manual CLP formatting — never truncates, always shows full number
+    const n = Math.round(Math.abs(parseFloat(v)||0));
+    const s = n.toString();
+    let result = '';
+    for(let i=0; i<s.length; i++){
+      if(i>0 && (s.length-i)%3===0) result+='.';
+      result+=s[i];
+    }
+    return (v<0?'-':'')+result;
   }
   document.getElementById('d-kg').textContent   = sumKg>0 ? fmtN(sumKg)+' kg' : '—';
   document.getElementById('d-cmp').textContent  = sumMP>0 ? '$'+fmtFull(sumMP) : '—';
