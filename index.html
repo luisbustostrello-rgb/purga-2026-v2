@@ -284,15 +284,67 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
     <div id="mod-dash" class="module active">
       <div class="page-hdr">
         <div><h2>Dashboard</h2><p>Resumen general · 2026</p></div>
-        <button class="btn btn-p btn-sm" onclick="loadDash()">↻ Actualizar</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-p btn-sm" onclick="loadDash()">↻ Actualizar</button>
+        </div>
       </div>
+
+      <!-- Filtros -->
+      <div class="toolbar" style="margin-bottom:14px">
+        <div class="cg"><label>Mes</label>
+          <select id="df-mes" onchange="loadDash()"><option value="">Todos</option><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+        </div>
+        <div class="cg"><label>Cuenta</label>
+          <select id="df-cta" onchange="loadDash()">
+            <option value="">Todas</option>
+            <option>IMPU</option><option>IMPU PIN</option><option>HCPU</option><option>IMR</option><option>CMR</option>
+          </select>
+        </div>
+        <div class="cg"><label>Máquina</label>
+          <select id="df-maq" onchange="loadDash()">
+            <option value="">Todas</option>
+            <option>LG</option><option>HAITIAN</option><option>STUBBE</option><option>HCPU</option>
+            <option>DESMA NEGRA</option><option>DESMA GRIS</option>
+            <option>PRENSA 1</option><option>PRENSA 2</option><option>PRENSA 3</option><option>PRENSA 4</option>
+          </select>
+        </div>
+        <div class="cg"><label>Material (SKU)</label>
+          <select id="df-sku" onchange="loadDash()"><option value="">Todos</option><option value="10027">10027</option><option value="10044">10044</option><option value="10046">10046</option><option value="10050">10050</option><option value="10053">10053</option><option value="10055">10055</option><option value="10060">10060</option><option value="10061">10061</option><option value="10070">10070</option><option value="10084">10084</option><option value="10001">10001</option><option value="19990">19990</option></select>
+        </div>
+        <div class="vd"></div>
+        <button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border-color:#FCA5A5" onclick="limpiarFiltrosDash()">✕ Limpiar filtros</button>
+        <span id="d-filtro-lbl" style="font-size:11px;color:var(--muted)"></span>
+      </div>
+
+      <!-- KPIs — números completos, font más pequeño si son largos -->
       <div class="kpi-grid">
-        <div class="kpi green"><div class="kpi-lbl">Total Kg Purga YTD</div><div class="kpi-val" id="d-kg">—</div><div class="kpi-sub">kg acumulados</div></div>
-        <div class="kpi blue"><div class="kpi-lbl">Costo MP Total</div><div class="kpi-val" id="d-cmp">—</div><div class="kpi-sub">materia prima</div></div>
-        <div class="kpi gold"><div class="kpi-lbl">Costo Total Paneles</div><div class="kpi-val" id="d-cpan">—</div><div class="kpi-sub">paneles malos</div></div>
-        <div class="kpi purple"><div class="kpi-lbl">Registros</div><div class="kpi-val" id="d-reg">—</div><div class="kpi-sub">ingresos totales</div></div>
-        <div class="kpi red"><div class="kpi-lbl">Total Paneles Malos</div><div class="kpi-val" id="d-pan">—</div><div class="kpi-sub">unidades</div></div>
+        <div class="kpi green">
+          <div class="kpi-lbl">Total Kg Purga</div>
+          <div class="kpi-val" id="d-kg" style="font-size:20px;word-break:break-all">—</div>
+          <div class="kpi-sub">kg acumulados</div>
+        </div>
+        <div class="kpi blue">
+          <div class="kpi-lbl">Costo MP Total</div>
+          <div class="kpi-val" id="d-cmp" style="font-size:18px;word-break:break-all">—</div>
+          <div class="kpi-sub">materia prima</div>
+        </div>
+        <div class="kpi gold">
+          <div class="kpi-lbl">Costo Total Paneles</div>
+          <div class="kpi-val" id="d-cpan" style="font-size:18px;word-break:break-all">—</div>
+          <div class="kpi-sub">paneles malos</div>
+        </div>
+        <div class="kpi purple">
+          <div class="kpi-lbl">Registros</div>
+          <div class="kpi-val" id="d-reg" style="font-size:20px">—</div>
+          <div class="kpi-sub">ingresos totales</div>
+        </div>
+        <div class="kpi red">
+          <div class="kpi-lbl">Total Paneles Malos</div>
+          <div class="kpi-val" id="d-pan" style="font-size:20px">—</div>
+          <div class="kpi-sub">unidades</div>
+        </div>
       </div>
+
       <div class="dash-grid">
         <div class="dash-box"><div class="dash-box-title">📊 Purga KG por mes</div><div class="bar-wrap" id="d-bar-kg"></div></div>
         <div class="dash-box"><div class="dash-box-title">💰 Costo MP por mes</div><div class="bar-wrap" id="d-bar-c"></div></div>
@@ -892,10 +944,41 @@ document.querySelectorAll('.nav-item').forEach(item=>{
 // ════════════════════════════════════════════════════════
 // DASHBOARD
 // ════════════════════════════════════════════════════════
+function limpiarFiltrosDash(){
+  ['df-mes','df-cta','df-maq','df-sku'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value='';
+  });
+  loadDash();
+}
+
 async function loadDash(){
   if(!sb) return;
   await loadMaestro();
-  const {data}=await sb.from('purgas').select('*').eq('tipo_panel','PURGA').eq('anio',2026);
+
+  // Read filters
+  const fMes = document.getElementById('df-mes')?.value || '';
+  const fCta = document.getElementById('df-cta')?.value || '';
+  const fMaq = document.getElementById('df-maq')?.value || '';
+  const fSku = document.getElementById('df-sku')?.value || '';
+
+  // Build filter label
+  const parts=[];
+  if(fMes){const MNAMES=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];parts.push('Mes: '+MNAMES[parseInt(fMes)]);}
+  if(fCta) parts.push('Cuenta: '+fCta);
+  if(fMaq) parts.push('Máquina: '+fMaq);
+  if(fSku) parts.push('SKU: '+fSku);
+  const lbl=document.getElementById('d-filtro-lbl');
+  if(lbl) lbl.textContent = parts.length?'Filtros: '+parts.join(' · '):'Sin filtros (todos los datos)';
+
+  // Query with filters
+  let q = sb.from('purgas').select('*').eq('tipo_panel','PURGA').eq('anio',2026);
+  if(fMes) q = q.eq('mes', parseInt(fMes));
+  if(fCta) q = q.eq('cuenta', fCta);
+  if(fMaq) q = q.eq('maquina', fMaq);
+  if(fSku) q = q.eq('mp_sku', fSku);
+
+  const {data}=await q;
   const rows=data||[];
   let sumKg=0,sumMP=0,sumPan=0,sumPM=0;
   const kgM=Array(12).fill(0),cM=Array(12).fill(0);
@@ -909,20 +992,37 @@ async function loadDash(){
     const cp=pm*gCPan(sku);
     sumKg+=kg; sumMP+=costo; sumPan+=cp; sumPM+=pm;
     if(mes>=0&&mes<12){kgM[mes]+=kg; cM[mes]+=costo;}
-    if(!byMat[sku]) byMat[sku]={kg:0,c:0}; byMat[sku].kg+=kg; byMat[sku].c+=costo;
+    if(!byMat[sku]) byMat[sku]={kg:0,c:0};
+    byMat[sku].kg+=kg; byMat[sku].c+=costo;
     const maq=r.maquina||'—';
-    if(!byMaq[maq]) byMaq[maq]={kg:0,c:0}; byMaq[maq].kg+=kg; byMaq[maq].c+=costo;
+    if(!byMaq[maq]) byMaq[maq]={kg:0,c:0};
+    byMaq[maq].kg+=kg; byMaq[maq].c+=costo;
     const cta=r.cuenta||'—';
-    if(!byCta[cta]) byCta[cta]={kg:0,c:0}; byCta[cta].kg+=kg; byCta[cta].c+=costo;
-    if(!byPan[sku]) byPan[sku]={pm:0,c:0}; byPan[sku].pm+=pm; byPan[sku].c+=cp;
+    if(!byCta[cta]) byCta[cta]={kg:0,c:0};
+    byCta[cta].kg+=kg; byCta[cta].c+=costo;
+    if(!byPan[sku]) byPan[sku]={pm:0,c:0};
+    byPan[sku].pm+=pm; byPan[sku].c+=cp;
   });
-  document.getElementById('d-kg').textContent  = sumKg>0?fmtN(sumKg)+' kg':'—';
-  document.getElementById('d-cmp').textContent = sumMP>0?'$'+fmtM0(sumMP):'—';
-  document.getElementById('d-cpan').textContent= sumPan>0?'$'+fmtM0(sumPan):'—';
-  document.getElementById('d-reg').textContent = rows.length;
-  document.getElementById('d-pan').textContent = sumPM>0?fmtN(sumPM)+' un':'—';
-  const maxKg=Math.max(...kgM,1), maxC=Math.max(...cM,1);
-  const KC=['#10B981','#059669','#047857','#34D399','#6EE7B7','#065F46','#0D9488','#0F766E','#14B8A6','#0891B2','#0284C7','#0369A1'];
+
+  // KPIs — números completos con separador de miles
+  function fmtFull(v){
+    return Math.round(v).toLocaleString('es-CL');
+  }
+  document.getElementById('d-kg').textContent   = sumKg>0 ? fmtN(sumKg)+' kg' : '—';
+  document.getElementById('d-cmp').textContent  = sumMP>0 ? '$'+fmtFull(sumMP) : '—';
+  document.getElementById('d-cpan').textContent = sumPan>0? '$'+fmtFull(sumPan) : '—';
+  document.getElementById('d-reg').textContent  = rows.length;
+  document.getElementById('d-pan').textContent  = sumPM>0 ? fmtN(sumPM)+' un' : '—';
+
+  // Auto-resize KPI font if number is long
+  ['d-cmp','d-cpan'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){
+      const len=(el.textContent||'').length;
+      el.style.fontSize = len>12?'14px':len>9?'16px':'18px';
+    }
+  });
+
   const CC=['#3B82F6','#2563EB','#1D4ED8','#60A5FA','#93C5FD','#1E40AF','#1E3A8A','#3B82F6','#60A5FA','#93C5FD','#BFDBFE','#2563EB'];
   const svgW=500, svgH=120, pad=30;
   const maxKgS=Math.max(...kgM,1);
@@ -937,40 +1037,40 @@ async function loadDash(){
   let labels=pts.map((p,i)=>'<text x="'+p.x+'" y="'+(svgH-10)+'" text-anchor="middle" font-size="9" fill="#6B7280">'+MSL[i+1]+'</text>').join('');
   const baseline='<line x1="'+pad+'" y1="'+(svgH-pad)+'" x2="'+(svgW-pad)+'" y2="'+(svgH-pad)+'" stroke="#E5E7EB" stroke-width="1"/>';
   document.getElementById('d-bar-kg').innerHTML='<svg width="100%" viewBox="0 0 '+svgW+' '+svgH+'" preserveAspectRatio="xMidYMid meet">'+baseline+'<path d="'+areaPath+'" fill="rgba(16,185,129,0.15)"/><path d="'+linePath+'" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linejoin="round"/>'+(circles+labels)+'</svg>';
+  const maxC=Math.max(...cM,1);
   document.getElementById('d-bar-c').innerHTML=cM.map((v,i)=>
     '<div class="bc"><div class="bv">'+( v>0?'$'+fmtM0(v/1000)+'k':'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxC*120),v>0?4:0)+'px;background:'+CC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
   const matRows=Object.entries(byMat).sort((a,b)=>b[1].kg-a[1].kg);
   const maxMKg=matRows.length?matRows[0][1].kg:1;
   document.getElementById('d-mat').innerHTML=matRows.map(([sku,v],i)=>
-    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,16)+'…</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMKg*100)+'%;background:'+PAL[i%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM(v.c)+'</div></div>').join('');
+    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMKg*100)+'%;background:'+PAL[i%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
   const maqRows=Object.entries(byMaq).sort((a,b)=>b[1].kg-a[1].kg);
   const maxMqKg=maqRows.length?maqRows[0][1].kg:1;
   document.getElementById('d-maq').innerHTML=maqRows.map(([m,v],i)=>
-    '<div class="hbar-row"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtM(v.c)+'</div></div>').join('');
+    '<div class="hbar-row"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
   const ctaRows=Object.entries(byCta).sort((a,b)=>b[1].kg-a[1].kg);
-  const maxCtaKg=ctaRows.length?ctaRows[0][1].kg:1;
-  const PIE = ['#2563EB','#DC2626','#D97706','#7C3AED','#059669','#0891B2'];
-  const totalCtaKg2 = ctaRows.reduce((s,[,v])=>s+v.kg,0);
-  let startA = -Math.PI/2, slices='';
+  const PIE=['#2563EB','#DC2626','#D97706','#7C3AED','#059669','#0891B2'];
+  const totalCtaKg2=ctaRows.reduce((s,[,v])=>s+v.kg,0);
+  let startA=-Math.PI/2, slices='';
   ctaRows.forEach(([c,v],i)=>{
     const pct=v.kg/totalCtaKg2, angle=pct*2*Math.PI;
-    const r1=85, r2=45;
-    const x1=100+r1*Math.cos(startA), y1=100+r1*Math.sin(startA);
-    const x2=100+r1*Math.cos(startA+angle), y2=100+r1*Math.sin(startA+angle);
-    const ix1=100+r2*Math.cos(startA+angle), iy1=100+r2*Math.sin(startA+angle);
-    const ix2=100+r2*Math.cos(startA), iy2=100+r2*Math.sin(startA);
+    const r1=85,r2=45;
+    const x1=100+r1*Math.cos(startA),y1=100+r1*Math.sin(startA);
+    const x2=100+r1*Math.cos(startA+angle),y2=100+r1*Math.sin(startA+angle);
+    const ix1=100+r2*Math.cos(startA+angle),iy1=100+r2*Math.sin(startA+angle);
+    const ix2=100+r2*Math.cos(startA),iy2=100+r2*Math.sin(startA);
     const large=angle>Math.PI?1:0;
     slices+='<path d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r1+','+r1+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' L'+ix1.toFixed(1)+','+iy1.toFixed(1)+' A'+r2+','+r2+' 0 '+large+',0 '+ix2.toFixed(1)+','+iy2.toFixed(1)+' Z" fill="'+PIE[i%PIE.length]+'" stroke="#fff" stroke-width="2"/>';
-    const midA=startA+angle/2, lx=100+(r1+r2)/2*Math.cos(midA), ly=100+(r1+r2)/2*Math.sin(midA);
-    if(pct>0.05) slices+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">'+( pct*100).toFixed(0)+'%</text>';
+    const midA=startA+angle/2,lx=100+(r1+r2)/2*Math.cos(midA),ly=100+(r1+r2)/2*Math.sin(midA);
+    if(pct>0.05) slices+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">'+(pct*100).toFixed(0)+'%</text>';
     startA+=angle;
   });
-  const legend=ctaRows.map(([c,v],i)=>'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:'+PIE[i%PIE.length]+';flex-shrink:0"></div><div style="flex:1;font-weight:500">'+c+'</div><div style="color:var(--muted)">'+fmtN(v.kg)+' kg</div><div style="color:var(--blue);font-weight:500;min-width:90px;text-align:right">$'+fmtM(v.c)+'</div></div>').join('');
+  const legend=ctaRows.map(([c,v],i)=>'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:'+PIE[i%PIE.length]+';flex-shrink:0"></div><div style="flex:1;font-weight:500">'+c+'</div><div style="color:var(--muted)">'+fmtN(v.kg)+' kg</div><div style="color:var(--blue);font-weight:500;min-width:90px;text-align:right">$'+fmtFull(v.c)+'</div></div>').join('');
   document.getElementById('d-cta').innerHTML='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><svg width="200" height="200" viewBox="0 0 200 200">'+slices+'</svg><div style="flex:1;min-width:160px">'+legend+'</div></div>';
   const panRows=Object.entries(byPan).filter(([,v])=>v.pm>0).sort((a,b)=>b[1].pm-a[1].pm);
   const maxPM=panRows.length?panRows[0][1].pm:1;
   document.getElementById('d-pan-mat').innerHTML=panRows.length?panRows.map(([sku,v])=>
-    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,16)+'…</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.pm/maxPM*100)+'%;background:#EF4444"><span>'+fmtN(v.pm)+' un</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+fmtM(v.c)+'</div></div>').join('')
+    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.pm/maxPM*100)+'%;background:#EF4444"><span>'+fmtN(v.pm)+' un</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+fmtFull(v.c)+'</div></div>').join('')
     :'<div class="empty">Sin paneles malos</div>';
 }
 
