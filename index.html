@@ -142,10 +142,10 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
 .hist-hdr h3{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
 
 /* DASHBOARD */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px;}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;}
 .kpi-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
-.kpi-val{font-size:24px;font-weight:600;line-height:1;}
+.kpi-val{font-size:22px;font-weight:600;line-height:1.2;overflow-wrap:break-word;word-break:break-word;min-width:0;}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:3px;}
 .kpi.green .kpi-val{color:var(--accent);}
 .kpi.blue .kpi-val{color:var(--blue);}
@@ -1014,13 +1014,16 @@ async function loadDash(){
   document.getElementById('d-reg').textContent  = rows.length;
   document.getElementById('d-pan').textContent  = sumPM>0 ? fmtN(sumPM)+' un' : '—';
 
-  // Auto-resize KPI font if number is long
-  ['d-cmp','d-cpan'].forEach(id=>{
+  // Auto-resize all KPI values based on content length
+  ['d-kg','d-cmp','d-cpan','d-reg','d-pan'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el){
-      const len=(el.textContent||'').length;
-      el.style.fontSize = len>12?'14px':len>9?'16px':'18px';
-    }
+    if(!el) return;
+    const len=(el.textContent||'').replace(/[^0-9]/g,'').length;
+    if(len>=13)      el.style.fontSize='13px';
+    else if(len>=11) el.style.fontSize='15px';
+    else if(len>=9)  el.style.fontSize='17px';
+    else if(len>=7)  el.style.fontSize='19px';
+    else             el.style.fontSize='22px';
   });
 
   const CC=['#3B82F6','#2563EB','#1D4ED8','#60A5FA','#93C5FD','#1E40AF','#1E3A8A','#3B82F6','#60A5FA','#93C5FD','#BFDBFE','#2563EB'];
