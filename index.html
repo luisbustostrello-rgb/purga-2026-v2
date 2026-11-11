@@ -272,17 +272,15 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="data">▤ Data</div>
       <div class="nav-item" data-mod="voucher">🖨 Voucher Ingreso</div>
       <div class="nav-item" data-mod="comparar">⇄ Comparar Meses</div>
+      <div style="padding:10px 8px 4px"><button onclick="document.getElementById('bg-modal').classList.add('open')" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;justify-content:center;">🎨 Personalizar fondo</button></div>
+      <div style="padding:4px 8px 4px"><button id="install-btn" type="button" style="width:100%;padding:7px 10px;background:#000;border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📲 Instalar app</button></div>
     </nav>
     <div class="sb-bottom">
-      <div style="padding:0 8px 6px"><button id="install-btn" type="button" style="width:100%;padding:7px 10px;background:#000;border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📲 Instalar app</button></div>
       <div class="db-row"><div class="dot" id="db-dot"></div><span id="db-txt">Conectando...</span></div>
       <div class="user-row" id="user-row">
         <span id="u-name">—</span>
         <span class="role-tag" id="u-role">—</span>
         <span class="logout-btn" id="logout-btn">Salir</span>
-      </div>
-      <div style="padding:5px 8px 2px">
-        <button onclick="document.getElementById('bg-modal').classList.add('open')" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;justify-content:center;">🎨 Personalizar fondo</button>
       </div>
     </div>
   </aside>
