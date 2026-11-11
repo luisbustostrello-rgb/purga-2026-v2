@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico PURGA</title>
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+body{font-family:system-ui,sans-serif;background:#000;color:#fff;margin:0;padding:18px;font-size:16px;line-height:1.4}
+h1{font-size:22px;margin:0 0 4px}
+p.s{color:#9ca3af;margin:0 0 16px;font-size:13px}
+.r{padding:10px 12px;border-radius:8px;margin-bottom:8px;background:#111827;border-left:6px solid #6b7280;word-break:break-word}
+.r.ok{border-color:#22c55e}.r.no{border-color:#ef4444}.r.wa{border-color:#eab308}
+.r b{display:block;font-size:14px}.r span{font-size:13px;color:#d1d5db}
+button{width:100%;padding:16px;font-size:18px;font-weight:700;border:0;border-radius:10px;background:#22c55e;color:#000;margin:12px 0;display:none}
+</style>
+</head>
+<body>
+<h1>Diagnóstico de instalación</h1>
+<p class="s">Abre esta página en Chrome y envíame una captura de todo lo que aparece.</p>
+<button id="inst">INSTALAR PURGA</button>
+<div id="out"></div>
+<script>
+const out=document.getElementById('out');
+function add(t,d,c){const e=document.createElement('div');e.className='r '+c;e.innerHTML='<b>'+t+'</b><span>'+d+'</span>';out.appendChild(e);}
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferred=e;
+  const b=document.getElementById('inst');b.style.display='block';
+  add('Chrome SÍ ofrece instalar','Se disparó el evento de instalación. Toca el botón verde de arriba.','ok');
+});
+document.getElementById('inst').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;}};
+window.addEventListener('appinstalled',()=>add('Instalada','La app quedó instalada.','ok'));
+
+(async()=>{
+  add('Dirección',location.href,location.protocol==='https:'?'ok':'no');
+  add('Navegador',navigator.userAgent,'wa');
+  const ua=navigator.userAgent;
+  add('Modo de página',/Android/.test(ua)?'Modo móvil (Android)':'Modo computadora (se pide "sitio para computadora")',/Android/.test(ua)?'ok':'wa');
+  add('Ya abierta como app',matchMedia('(display-mode: standalone)').matches?'Sí, ya estás dentro de la app instalada':'No, estás en el navegador','wa');
+
+  try{
+    const r=await fetch('manifest.webmanifest',{cache:'no-store'});
+    const t=await r.text();
+    let j=null;try{j=JSON.parse(t)}catch(e){}
+    add('manifest.webmanifest','Estado '+r.status+' · tipo '+(r.headers.get('content-type')||'?')+(j?' · JSON válido':' · NO es JSON válido'),r.ok&&j?'ok':'no');
+    if(j){
+      for(const ic of (j.icons||[])){
+        try{const x=await fetch(ic.src,{cache:'no-store'});
+          add('Ícono '+ic.sizes,ic.src+' → estado '+x.status,x.ok?'ok':'no');
+        }catch(e){add('Ícono '+ic.sizes,ic.src+' → error','no');}
+      }
+      add('start_url / scope',(j.start_url||'-')+' · '+(j.scope||'-'),'wa');
+    }
+  }catch(e){add('manifest.webmanifest','No se pudo leer: '+e,'no');}
+
+  try{
+    const r=await fetch('index.html',{cache:'no-store'});const t=await r.text();
+    add('index.html enlaza el manifest',t.includes('manifest.webmanifest')?'Sí':'NO: el index.html subido es una versión sin el manifest',t.includes('manifest.webmanifest')?'ok':'no');
+    add('index.html registra sw.js',t.includes("register('sw.js')")?'Sí':'NO: falta el registro del service worker',t.includes("register('sw.js')")?'ok':'no');
+  }catch(e){add('index.html','No se pudo leer','no');}
+
+  try{
+    const r=await fetch('sw.js',{cache:'no-store'});
+    add('sw.js','Estado '+r.status+' · tipo '+(r.headers.get('content-type')||'?'),r.ok?'ok':'no');
+  }catch(e){add('sw.js','No se pudo leer','no');}
+
+  if('serviceWorker' in navigator){
+    try{
+      const reg=await navigator.serviceWorker.register('sw.js');
+      await navigator.serviceWorker.ready;
+      add('Service worker','Activo · alcance '+reg.scope,'ok');
+    }catch(e){add('Service worker','Falló el registro: '+e,'no');}
+  }else add('Service worker','Este navegador no lo permite','no');
+
+  setTimeout(()=>{if(!deferred)add('Evento de instalación','Chrome NO lo disparó en 5 segundos. Si lo anterior está todo en verde, el bloqueo viene del navegador o de la tablet.','wa');},5000);
+})();
+</script>
+</body>
+</html>
