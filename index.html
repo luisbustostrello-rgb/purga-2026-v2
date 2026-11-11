@@ -274,6 +274,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="comparar">⇄ Comparar Meses</div>
     </nav>
     <div class="sb-bottom">
+      <div style="padding:0 8px 6px"><button id="install-btn" type="button" style="width:100%;padding:7px 10px;background:#000;border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📲 Instalar app</button></div>
       <div class="db-row"><div class="dot" id="db-dot"></div><span id="db-txt">Conectando...</span></div>
       <div class="user-row" id="user-row">
         <span id="u-name">—</span>
@@ -3007,6 +3008,19 @@ document.addEventListener('DOMContentLoaded',function(){
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 }
+</script>
+<script>
+(function(){
+  var deferred=null,btn=document.getElementById('install-btn');
+  if(!btn)return;
+  if(matchMedia('(display-mode: standalone)').matches||navigator.standalone){btn.style.display='none';return;}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;});
+  window.addEventListener('appinstalled',function(){btn.style.display='none';deferred=null;});
+  btn.addEventListener('click',async function(){
+    if(deferred){deferred.prompt();try{await deferred.userChoice;}catch(e){}deferred=null;return;}
+    alert('Para instalar PURGA:\n\n1. Toca el menú ⋮ de Chrome.\n2. Elige "Instalar app" o "Añadir a pantalla de inicio".\n3. Si dice "Instalar", tócalo.\n\nSi Chrome dice que ya está instalada, borra los datos del sitio (ícono a la izquierda de la dirección → Configuración del sitio → Borrar datos) y recarga.');
+  });
+})();
 </script>
 </body>
 </html>
