@@ -256,6 +256,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <input type="password" id="l-pass" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
     </div>
     <button class="login-btn" id="login-btn">Ingresar</button>
+      <div style="text-align:center;font-size:10px;color:#9CA3AF;margin-top:12px">Acceso seguro · v2</div>
   </div>
 </div>
 
@@ -272,6 +273,8 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="data">▤ Data</div>
       <div class="nav-item" data-mod="voucher">🖨 Voucher Ingreso</div>
       <div class="nav-item" data-mod="comparar">⇄ Comparar Meses</div>
+      <div class="nav-item" data-mod="auditoria" id="nav-auditoria" style="display:none">📜 Movimientos</div>
+      <div class="nav-item" data-mod="usuarios" id="nav-usuarios" style="display:none">🔐 Usuarios y permisos</div>
       <div style="padding:10px 8px 4px"><button onclick="document.getElementById('bg-modal').classList.add('open')" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;justify-content:center;">🎨 Personalizar fondo</button></div>
       <div style="padding:4px 8px 4px"><button id="backup-btn" type="button" onclick="descargarRespaldo()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.85);font-size:12px;cursor:pointer;font-family:inherit">⬇ Descargar respaldo</button></div>
       <div style="padding:4px 8px 4px"><button id="install-btn" type="button" style="width:100%;padding:7px 10px;background:#000;border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📲 Instalar app</button></div>
@@ -283,6 +286,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <span class="role-tag" id="u-role">—</span>
         <span class="logout-btn" id="logout-btn">Salir</span>
       </div>
+      <div style="padding:0 12px 4px"><span onclick="cambiarPass()" style="font-size:10px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline">🔑 Cambiar contraseña</span></div>
     </div>
   </aside>
 
@@ -631,6 +635,41 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
 
 
     <!-- COMPARAR MESES -->
+    <!-- MOVIMIENTOS (solo superadmin) -->
+    <div id="mod-auditoria" class="module">
+      <div class="page-hdr"><div><h2>📜 Movimientos</h2><p>Registro de todo lo que hace cada usuario · solo visible para el superadmin</p></div></div>
+      <div class="toolbar">
+        <div class="cg"><label>Usuario</label><select id="au-user" onchange="loadAuditoria()"><option value="">Todos</option></select></div>
+        <div class="cg"><label>Acción</label><select id="au-acc" onchange="loadAuditoria()"><option value="">Todas</option><option>INSERT</option><option>UPDATE</option><option>DELETE</option><option>LOGIN</option><option>LOGOUT</option><option>IMPORT</option><option>BACKUP</option><option>PASSWORD</option></select></div>
+        <div class="cg"><label>Módulo</label><select id="au-tab" onchange="loadAuditoria()"><option value="">Todos</option><option value="purgas">Purga</option><option value="maestro_sku">Data (SKU)</option><option value="profiles">Usuarios</option></select></div>
+        <div class="cg"><label>Desde</label><input type="date" id="au-d1" onchange="loadAuditoria()"/></div>
+        <div class="cg"><label>Hasta</label><input type="date" id="au-d2" onchange="loadAuditoria()"/></div>
+        <div class="vd"></div>
+        <button class="btn btn-p btn-sm" onclick="loadAuditoria()">↻</button>
+        <button class="btn btn-g btn-sm" onclick="exportAuditoria()">⬇ Excel</button>
+        <span id="au-count" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+      <div class="card tbl-wrap">
+        <table><thead><tr><th style="width:150px">Fecha y hora</th><th style="width:110px">Usuario</th><th style="width:90px">Acción</th><th style="width:110px">Módulo</th><th>Detalle</th></tr></thead>
+        <tbody id="au-body"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody></table>
+      </div>
+      <div style="text-align:center;margin:12px"><button class="btn btn-sm" id="au-more" style="display:none" onclick="loadAuditoria(false)">Cargar más</button></div>
+    </div>
+
+    <!-- USUARIOS Y PERMISOS (solo superadmin) -->
+    <div id="mod-usuarios" class="module">
+      <div class="page-hdr"><div><h2>🔐 Usuarios y permisos</h2><p>Define el rol y qué módulos puede ver cada usuario</p></div></div>
+      <div class="alert" id="al-usr"></div>
+      <div class="card" style="padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.7">
+        <b>Superadmin:</b> todo, más Movimientos y Usuarios · <b>Administrador:</b> ve, crea, edita y borra, y maneja Data · <b>Editor:</b> ve, crea, edita e importa, sin borrar ni tocar Data · <b>Lectura:</b> solo ve. Los módulos marcados definen lo que aparece en su menú.
+      </div>
+      <div class="card tbl-wrap">
+        <table><thead><tr><th style="width:110px">Usuario</th><th style="width:150px">Nombre</th><th style="width:140px">Rol</th><th style="width:70px;text-align:center">Activo</th><th>Módulos que puede ver</th><th style="width:90px"></th></tr></thead>
+        <tbody id="us-body"><tr><td colspan="6"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody></table>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px">Para agregar un usuario nuevo: Supabase → Authentication → Users → Add user (correo <b>usuario@dominio</b>, con Auto Confirm). Aparecerá aquí como pendiente (inactivo) para que le asignes rol y módulos.</p>
+    </div>
+
     <div id="mod-comparar" class="module">
       <div class="page-hdr">
         <div><h2>⇄ Comparación de Meses</h2><p>Tres tablas: por SKU, Cuenta y Máquina — con observaciones automáticas</p></div>
@@ -772,10 +811,11 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
 // ════════════════════════════════════════════════════════
 const CFG = {
   url: 'https://ggjbbxtzielyexxhxivo.supabase.co',
-  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnamJieHR6aWVseWV4eGh4aXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTc0NzQsImV4cCI6MjA5NjE5MzQ3NH0.4nFWFTZrmA0fGAT6HBMoM7ctiQrEntCnptDc843uMUU'
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdnamJieHR6aWVseWV4eGh4aXZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTc0NzQsImV4cCI6MjA5NjE5MzQ3NH0.4nFWFTZrmA0fGAT6HBMoM7ctiQrEntCnptDc843uMUU',
+  domain: 'lbdespacho.cl'   // correo interno: usuario@dominio (debe coincidir con Supabase Auth)
 };
 
-// Credenciales gestionadas en Supabase (tabla: app_users)
+// Acceso gestionado con Supabase Auth + perfiles (tabla: profiles)
 // No hay usuarios ni contraseñas en este archivo
 
 // ════════════════════════════════════════════════════════
@@ -840,7 +880,9 @@ function sv(v){ return v||'—'; }
 function gDesc(sku){ return (maestro[sku]||{}).descripcion||DESC_FIJA[sku]||sku; }
 function gPrecio(sku){ return parseFloat((maestro[sku]||{}).precio_unitario)||0; }
 function gCPan(sku){ return parseFloat((maestro[sku]||{}).costo_un_paneles)||0; }
-function isAdmin(){ return currentUser&&currentUser.role==='admin'; }
+function isAdmin(){ return !!currentUser&&['superadmin','admin','editor'].includes(currentUser.role); }
+function canDel(){ return !!currentUser&&['superadmin','admin'].includes(currentUser.role); }
+function isSuper(){ return !!currentUser&&currentUser.role==='superadmin'; }
 function calcMOM(vals){
   const wd=vals.filter(v=>v>0);
   if(wd.length<2) return null;
@@ -868,87 +910,41 @@ document.getElementById('l-pass').addEventListener('keydown', function(e){ if(e.
 document.getElementById('l-user').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
 
 async function doLogin(){
-  const user   = document.getElementById('l-user').value.trim().toLowerCase();
-  const pass   = document.getElementById('l-pass').value;
-  const errEl  = document.getElementById('login-err');
-  const btn    = document.getElementById('login-btn');
-
+  const user  = document.getElementById('l-user').value.trim().toLowerCase();
+  const pass  = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn');
+  const fail  = function(m){ errEl.textContent=m; errEl.classList.add('show'); btn.textContent='Ingresar'; btn.disabled=false; document.getElementById('l-pass').value=''; };
   if(!user || !pass){ errEl.textContent='Ingresa usuario y contraseña'; errEl.classList.add('show'); return; }
-
   btn.textContent='Verificando...'; btn.disabled=true;
-
-  try {
-    // Supabase client needed for auth query — create a temporary one
-    const _sb = supabase.createClient(CFG.url, CFG.key);
-
-    // Hash the password with SHA-256 before comparing
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pass);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
-
-    // Query app_users table
-    const { data: rows, error } = await _sb
-      .from('app_users')
-      .select('username, role, name, pass_hash')
-      .eq('username', user)
-      .eq('activo', true)
-      .single();
-
-    if(error || !rows){
-      errEl.textContent='Usuario o contraseña incorrectos';
-      errEl.classList.add('show');
-      btn.textContent='Ingresar'; btn.disabled=false;
-      document.getElementById('l-pass').value='';
-      return;
+  try{
+    const A=getAuth();
+    const {data,error}=await A.auth.signInWithPassword({email:user+'@'+CFG.domain,password:pass});
+    if(error||!data||!data.user){
+      const m=(error&&error.message)||'sin respuesta del servidor';
+      return fail(m==='Invalid login credentials'?'Usuario o contraseña incorrectos':'Error: '+m);
     }
-
-    // Compare hash
-    if(rows.pass_hash !== hashHex){
-      errEl.textContent='Usuario o contraseña incorrectos';
-      errEl.classList.add('show');
-      btn.textContent='Ingresar'; btn.disabled=false;
-      document.getElementById('l-pass').value='';
-      return;
-    }
-
-    // Login OK
-    currentUser = { role: rows.role, name: rows.name, username: rows.username };
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').classList.add('visible');
-    document.getElementById('u-name').textContent = currentUser.name;
-    document.getElementById('u-role').textContent = isAdmin()?'Admin':'Solo lectura';
-    errEl.classList.remove('show');
-    btn.textContent='Ingresar'; btn.disabled=false;
-    applyRole();
-    initApp();
-
-  } catch(e) {
-    errEl.textContent='Error de conexión: '+e.message;
-    errEl.classList.add('show');
-    btn.textContent='Ingresar'; btn.disabled=false;
-  }
+    const ok=await enterApp(data.user);
+    if(!ok){ await A.auth.signOut(); return fail('Tu usuario está pendiente o desactivado. Pide acceso a LBUSTOS.'); }
+    errEl.classList.remove('show'); btn.textContent='Ingresar'; btn.disabled=false;
+    logAudit('LOGIN','Inicio de sesión');
+  }catch(e){ fail('Error de conexión: '+e.message); }
 }
 
-document.getElementById('logout-btn').addEventListener('click', function(){
-  currentUser=null; sb=null;
-  document.getElementById('app').classList.remove('visible');
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('l-user').value='';
-  document.getElementById('l-pass').value='';
-  document.getElementById('db-dot').className='dot';
-  document.getElementById('db-txt').textContent='Conectando...';
+document.getElementById('logout-btn').addEventListener('click', async function(){
+  try{ await logAudit('LOGOUT','Cierre de sesión'); await getAuth().auth.signOut(); }catch(e){}
+  currentUser=null; sb=null; location.reload();
 });
 
 function applyRole(){
   if(!isAdmin()){
     document.getElementById('vn-ing').classList.add('show');
+    ['btn-guardar-todo','btn-importar','btn-limpiar'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display='none';});
+  }
+  if(!canDel()){
     document.getElementById('vn-data').classList.add('show');
-    ['btn-guardar-todo','btn-importar','btn-limpiar','btn-nuevo-mat','btn-imp-mat'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.style.display='none';
-    });
+    ['btn-nuevo-mat','btn-imp-mat'].forEach(id=>{const el=document.getElementById(id); if(el) el.style.display='none';});
+    const bk=document.getElementById('backup-btn'); if(bk&&bk.parentNode) bk.parentNode.style.display='none';
   }
 }
 
@@ -957,7 +953,7 @@ function applyRole(){
 // ════════════════════════════════════════════════════════
 async function initApp(){
   try {
-    sb = supabase.createClient(CFG.url, CFG.key);
+    sb = getAuth();
     document.getElementById('db-dot').className='dot ok';
     document.getElementById('db-txt').textContent='Conectado';
     await loadMaestro();
@@ -995,6 +991,8 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     if(mod==='voucher')   loadVoucher();
     if(mod==='comparar')  initComparar();
     if(mod==='ingreso')  loadRecientes();
+    if(mod==='auditoria') loadAuditoria();
+    if(mod==='usuarios')  loadUsuarios();
   });
 });
 
@@ -1258,7 +1256,7 @@ function setRowRO(i,d){
     const v=vals[ci]!==undefined?vals[ci]:'—';
     td.innerHTML='<span class="td-ro'+(v==='—'?' empty-v':'')+'">'+v+'</span>';
   });
-  row.querySelector('.td-act').innerHTML='<button class="btn btn-b btn-sm" onclick="editarFila('+i+')">✏</button>'+(isAdmin()?'<button class="del-btn" style="margin-left:3px" onclick="eliminarFila('+i+','+d.id+')">✕</button>':'');
+  row.querySelector('.td-act').innerHTML='<button class="btn btn-b btn-sm" onclick="editarFila('+i+')">✏</button>'+(canDel()?'<button class="del-btn" style="margin-left:3px" onclick="eliminarFila('+i+','+d.id+')">✕</button>':'');
 }
 async function editarFila(i){
   if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede editar','err');return;}
@@ -1283,7 +1281,7 @@ function buildIngresoTableRow(i){
   });
 }
 async function eliminarFila(i,dbId){
-  if(!isAdmin()) return;
+  if(!canDel()) return;
   if(!confirm('¿Eliminar?')) return;
   await sb.from('purgas').delete().eq('id',dbId);
   rowState[i]={mode:'input',dbId:null};
@@ -1612,6 +1610,7 @@ async function importarExcel(input){
     input.value='';
     if(error){showAlert('ing','Error: '+error.message,'err');return;}
     showAlert('ing','✓ '+recs.length+' registros importados','ok');
+    logAudit('IMPORT','Carga masiva: '+recs.length+' registros ('+meses+')','purgas');
     loadRecientes();
   };
   reader.readAsArrayBuffer(file);
@@ -1634,13 +1633,13 @@ async function loadRecientes(){
       +'<td><span class="badge badge-gray" style="font-size:10px">'+( r.mp_sku||'—' )+'</span></td>'
       +'<td class="muted" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( r.mp_descripcion||'—' )+'</td>'
       +'<td class="tr">$'+( fmtM(r.costo_usd||0) )+'</td>'
-      +'<td>'+( isAdmin()?'<button class="del-btn" onclick="delReciente('+r.id+')">✕</button>':'' )+'</td></tr>';
+      +'<td>'+( canDel()?'<button class="del-btn" onclick="delReciente('+r.id+')">✕</button>':'' )+'</td></tr>';
   });
   t+='</tbody></table>';
   document.getElementById('ing-hist').innerHTML=t;
 }
 async function delReciente(id){
-  if(!isAdmin()){showAlert('ing','⛔ Solo el administrador puede eliminar','err');return;}
+  if(!canDel()){showAlert('ing','⛔ Solo el administrador puede eliminar','err');return;}
   if(!confirm('¿Eliminar?')) return;
   await sb.from('purgas').delete().eq('id',id);
   loadRecientes();
@@ -1803,7 +1802,7 @@ async function saveEditModal(){
 }
 
 async function deleteResumen(id){
-  if(!isAdmin()){showAlert('res','⛔ Solo el administrador puede eliminar','err');return;}
+  if(!canDel()){showAlert('res','⛔ Solo el administrador puede eliminar','err');return;}
   if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
   const {error}=await sb.from('purgas').delete().eq('id',id);
   if(error){showAlert('res','Error al eliminar: '+error.message,'err');return;}
@@ -1812,7 +1811,7 @@ async function deleteResumen(id){
 }
 
 async function deleteFromModal(){
-  if(!isAdmin()||!editResId) return;
+  if(!canDel()||!editResId) return;
   if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
   const {error}=await sb.from('purgas').delete().eq('id',editResId);
   if(error){alert('Error: '+error.message);return;}
@@ -2740,7 +2739,7 @@ function renderData(rows){
       +'<td class="tr"><span class="price-c">'+p+'</span></td>'
       +'<td><span class="um-tag">'+( r.unidad_medida||'KG' )+'</span></td>'
       +'<td class="tr"><span class="price-c">'+cp+'</span></td>'
-      +'<td class="tc">'+( isAdmin()?'<button class="btn btn-b btn-sm" onclick="editMat(\''+r.sku+'\')">✏</button> <button class="del-btn" onclick="delMat(\''+r.sku+'\')">✕</button>':'<span class="muted" style="font-size:11px">Solo lectura</span>' )+'</td>'
+      +'<td class="tc">'+( canDel()?'<button class="btn btn-b btn-sm" onclick="editMat(\''+r.sku+'\')">✏</button> <button class="del-btn" onclick="delMat(\''+r.sku+'\')">✕</button>':'<span class="muted" style="font-size:11px">Solo lectura</span>' )+'</td>'
       +'</tr>';
   });
   document.getElementById('d-body').innerHTML=html;
@@ -2750,7 +2749,7 @@ function filterData(){
   renderData(allDataItems.filter(r=>(r.sku||'').toLowerCase().includes(q)||(r.descripcion||'').toLowerCase().includes(q)));
 }
 function editMat(sku){
-  if(!isAdmin()) return;
+  if(!canDel()) return;
   if(dataEditSku) cancelEditMat();
   dataEditSku=sku;
   const row=allDataItems.find(r=>r.sku===sku); if(!row) return;
@@ -2765,7 +2764,7 @@ function editMat(sku){
 }
 function cancelEditMat(){dataEditSku=null;renderData(allDataItems);}
 async function saveEditMat(oldSku){
-  if(!isAdmin()||!sb) return;
+  if(!canDel()||!sb) return;
   const newSku=document.getElementById('di-sku').value.trim();
   const desc=document.getElementById('di-desc').value.trim();
   const precio=parseFloat(document.getElementById('di-precio').value)||null;
@@ -2785,7 +2784,7 @@ async function saveEditMat(oldSku){
   await loadMaestro(); loadData();
 }
 function nuevoMat(){
-  if(!isAdmin()) return;
+  if(!canDel()) return;
   if(dataEditSku) cancelEditMat();
   const tbody=document.getElementById('d-body');
   const umOpts=UM_OPTIONS.map(u=>'<option value="'+u+'"'+(u==='KG'?' selected':'')+'>'+u+'</option>').join('');
@@ -2800,7 +2799,7 @@ function nuevoMat(){
   document.getElementById('ni-sku').focus();
 }
 async function saveNuevoMat(){
-  if(!isAdmin()||!sb) return;
+  if(!canDel()||!sb) return;
   const sku=document.getElementById('ni-sku').value.trim();
   const desc=document.getElementById('ni-desc').value.trim();
   const precio=parseFloat(document.getElementById('ni-precio').value)||null;
@@ -2813,7 +2812,7 @@ async function saveNuevoMat(){
   await loadMaestro(); loadData();
 }
 async function delMat(sku){
-  if(!isAdmin()){showAlert('data','⛔ Solo el administrador puede eliminar','err');return;}
+  if(!canDel()){showAlert('data','⛔ Solo el administrador puede eliminar','err');return;}
   if(!confirm('¿Eliminar '+sku+'?')) return;
   const {error}=await sb.from('maestro_sku').delete().eq('sku',sku);
   if(error){showAlert('data','Error: '+error.message,'err');return;}
@@ -2821,7 +2820,7 @@ async function delMat(sku){
   await loadMaestro(); loadData();
 }
 async function importarMat(input){
-  if(!isAdmin()){showAlert('data','⛔ Solo el administrador puede importar','err');input.value='';return;}
+  if(!canDel()){showAlert('data','⛔ Solo el administrador puede importar','err');input.value='';return;}
   if(!sb) return;
   const file=input.files[0]; if(!file) return;
   const reader=new FileReader();
@@ -3311,10 +3310,148 @@ window.descargarRespaldo=async function(){
     sheet(wb,'Comparar Meses',[['Año','Mes','KG Purga','Var. KG % vs mes anterior','Costo MP','Var. costo % vs mes anterior','Paneles malos (un)','Costo paneles malos'],...meses.map((o,i)=>[o.a,MES[o.m-1]||o.m,rd(o.kg),i?pct(o.kg,meses[i-1].kg):'',rd(o.mp),i?pct(o.mp,meses[i-1].mp):'',o.pm,rd(o.cp)])]);
     const f=new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb,'Respaldo_Purga_'+f+'.xlsx');
+    logAudit('BACKUP','Respaldo Excel: '+all.length+' registros, '+wb.SheetNames.length+' hojas');
     alert('✓ Respaldo listo: '+wb.SheetNames.length+' hojas, '+all.length+' registros de purga en total.');
   }catch(e){alert('No se pudo generar el respaldo: '+(e.message||e));}
   btn.disabled=false;btn.textContent=t0;
 };
+})();
+</script>
+
+<script>
+// ── AUTENTICACIÓN, PERMISOS, MOVIMIENTOS Y USUARIOS ─────
+let AU_client=null,AU_idle=null,AU_rows=[],AU_off=0;
+const AU_MODS=[['dash','Dashboard'],['ingreso','Ingreso Purga'],['resumen','Resumen Purga'],['analisis','Análisis Purga'],['paneles','Paneles Malos'],['data','Data'],['voucher','Voucher Ingreso'],['comparar','Comparar Meses']];
+const AU_ROLES=[['superadmin','Superadmin'],['admin','Administrador'],['editor','Editor'],['lectura','Lectura']];
+const AU_TAB={purgas:'Purga',maestro_sku:'Data (SKU)',profiles:'Usuarios'};
+const escH=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function getAuth(){ if(!AU_client) AU_client=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}}); return AU_client; }
+
+async function enterApp(u){
+  const r=await getAuth().from('profiles').select('*').eq('user_id',u.id).single();
+  const p=r.data;
+  if(r.error||!p||!p.activo) return false;
+  currentUser={id:u.id,role:p.role,name:p.nombre||p.username,username:p.username,modulos:p.modulos||[]};
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('u-name').textContent=currentUser.name;
+  document.getElementById('u-role').textContent=(AU_ROLES.find(x=>x[0]===p.role)||[0,p.role])[1];
+  applyRole(); applyModules(); initApp(); startIdle();
+  return true;
+}
+function applyModules(){
+  const sup=isSuper(),mods=currentUser.modulos||[];
+  let first=null;
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    const m=n.dataset.mod,special=(m==='auditoria'||m==='usuarios');
+    const ok=special?sup:(sup||mods.includes(m));
+    n.style.display=ok?'':'none';
+    if(ok&&!first)first=n;
+  });
+  const act=document.querySelector('.nav-item.active');
+  if(first&&(!act||act.style.display==='none')) first.click();
+  let nm=document.getElementById('no-mods');
+  if(!first){
+    if(!nm){nm=document.createElement('div');nm.id='no-mods';nm.style.cssText='padding:40px;text-align:center;color:var(--muted);font-size:14px';nm.textContent='Todavía no tienes módulos asignados. Pide acceso a LBUSTOS.';document.querySelector('.main').prepend(nm);}
+    document.querySelectorAll('.module').forEach(m=>m.classList.remove('active'));
+  }else if(nm)nm.remove();
+}
+async function logAudit(accion,texto,tabla){
+  try{
+    if(!currentUser)return;
+    await getAuth().from('audit_log').insert({user_id:currentUser.id,username:currentUser.username,accion:accion,tabla:tabla||null,detalle:texto?{texto:texto}:null});
+  }catch(e){}
+}
+function startIdle(){
+  const MAX=30*60*1000;
+  const reset=function(){clearTimeout(AU_idle);AU_idle=setTimeout(async function(){
+    await logAudit('LOGOUT','Sesión cerrada por inactividad (30 min)');
+    try{await getAuth().auth.signOut();}catch(e){}
+    location.reload();},MAX);};
+  ['click','keydown','pointermove','touchstart'].forEach(ev=>window.addEventListener(ev,reset,{passive:true}));
+  reset();
+}
+async function cambiarPass(){
+  const a=prompt('Nueva contraseña (mínimo 10 caracteres):'); if(!a)return;
+  if(a.length<10){alert('Debe tener al menos 10 caracteres.');return;}
+  const b=prompt('Repite la nueva contraseña:'); if(a!==b){alert('No coinciden.');return;}
+  const {error}=await getAuth().auth.updateUser({password:a});
+  if(error){alert('No se pudo cambiar: '+error.message);return;}
+  logAudit('PASSWORD','Cambio de contraseña'); alert('✓ Contraseña actualizada.');
+}
+
+// ---- Movimientos
+const AU_SKIP=['created_at','id','user_id'];
+function auDiff(a,d){const out=[];Object.keys(d||{}).forEach(k=>{if(AU_SKIP.includes(k))return;if(JSON.stringify((a||{})[k])!==JSON.stringify(d[k]))out.push(k+': '+((a||{})[k]==null?'—':JSON.stringify((a||{})[k]).replace(/^"|"$/g,''))+' → '+(d[k]==null?'—':JSON.stringify(d[k]).replace(/^"|"$/g,'')));});return out;}
+function auResumen(r){
+  const d=r.detalle||{};
+  if(d.texto)return d.texto;
+  const x=d.despues||d.antes||{};let base='';
+  if(r.tabla==='purgas')base=[x.cuenta,x.maquina,x.fecha_registro,(x.kg!=null?x.kg+' kg':'')].filter(Boolean).join(' · ');
+  else if(r.tabla==='maestro_sku')base=[x.sku,x.descripcion].filter(Boolean).join(' · ');
+  else if(r.tabla==='profiles')base=x.username||'';
+  if(r.accion==='UPDATE'){const df=auDiff(d.antes,d.despues);return base+(df.length?' — '+df.slice(0,4).join(' | ')+(df.length>4?' …':''):'');}
+  return base;
+}
+async function loadAuditoria(reset){
+  if(!sb||!isSuper())return;
+  if(reset!==false){AU_off=0;AU_rows=[];}
+  const sel=document.getElementById('au-user');
+  if(sel.options.length<2){const pr=await sb.from('profiles').select('username').order('username');(pr.data||[]).forEach(u=>{const o=document.createElement('option');o.value=u.username;o.textContent=u.username;sel.appendChild(o);});}
+  let q=sb.from('audit_log').select('*',{count:'exact'}).order('created_at',{ascending:false}).range(AU_off,AU_off+199);
+  const u=sel.value,a=document.getElementById('au-acc').value,t=document.getElementById('au-tab').value,d1=document.getElementById('au-d1').value,d2=document.getElementById('au-d2').value;
+  if(u)q=q.eq('username',u); if(a)q=q.eq('accion',a); if(t)q=q.eq('tabla',t);
+  if(d1)q=q.gte('created_at',new Date(d1+'T00:00:00').toISOString());
+  if(d2)q=q.lte('created_at',new Date(d2+'T23:59:59').toISOString());
+  const {data,error,count}=await q;
+  const body=document.getElementById('au-body');
+  if(error){body.innerHTML='<tr><td colspan="5" class="empty">Error: '+escH(error.message)+'</td></tr>';return;}
+  AU_rows=AU_rows.concat(data||[]);AU_off=AU_rows.length;
+  body.innerHTML=AU_rows.length?AU_rows.map(r=>'<tr><td style="white-space:nowrap">'+escH(new Date(r.created_at).toLocaleString('es-CL'))+'</td><td><b>'+escH(r.username||'—')+'</b></td><td>'+escH(r.accion)+'</td><td>'+escH(AU_TAB[r.tabla]||r.tabla||'Sistema')+'</td><td style="font-size:12px">'+escH(auResumen(r))+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Sin movimientos</td></tr>';
+  document.getElementById('au-count').textContent=AU_rows.length+' de '+(count==null?AU_rows.length:count)+' movimientos';
+  document.getElementById('au-more').style.display=(count!=null&&AU_rows.length<count)?'':'none';
+}
+function exportAuditoria(){
+  if(typeof XLSX==='undefined'||!AU_rows.length){alert('No hay movimientos cargados.');return;}
+  const rows=AU_rows.map(r=>({'Fecha y hora':new Date(r.created_at).toLocaleString('es-CL'),'Usuario':r.username||'','Acción':r.accion,'Módulo':AU_TAB[r.tabla]||r.tabla||'Sistema','Registro':r.registro_id||'','Detalle':auResumen(r),'Antes':r.detalle&&r.detalle.antes?JSON.stringify(r.detalle.antes):'','Después':r.detalle&&r.detalle.despues?JSON.stringify(r.detalle.despues):''}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Movimientos');
+  XLSX.writeFile(wb,'Movimientos_Purga_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ---- Usuarios y permisos
+function usrMsg(m,t){const e=document.getElementById('al-usr');e.textContent=m;e.className='alert show alert-'+(t==='err'?'err':'ok');setTimeout(()=>e.classList.remove('show'),4000);}
+async function loadUsuarios(){
+  if(!sb||!isSuper())return;
+  const {data,error}=await sb.from('profiles').select('*').order('username');
+  const body=document.getElementById('us-body');
+  if(error){body.innerHTML='<tr><td colspan="6" class="empty">Error: '+escH(error.message)+'</td></tr>';return;}
+  body.innerHTML=(data||[]).map(p=>{
+    const me=p.user_id===currentUser.id;
+    return '<tr data-uid="'+escH(p.user_id)+'"><td><b>'+escH(p.username)+'</b>'+(p.activo?'':' <span style="color:#B45309;font-size:11px">· pendiente</span>')+'</td>'
+     +'<td><input type="text" class="us-nom" value="'+escH(p.nombre||'')+'" style="width:130px"/></td>'
+     +'<td><select class="us-rol"'+(me?' disabled':'')+'>'+AU_ROLES.map(r=>'<option value="'+r[0]+'"'+(p.role===r[0]?' selected':'')+'>'+r[1]+'</option>').join('')+'</select></td>'
+     +'<td style="text-align:center"><input type="checkbox" class="us-act"'+(p.activo?' checked':'')+(me?' disabled':'')+'/></td>'
+     +'<td style="font-size:12px;line-height:2">'+AU_MODS.map(m=>'<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" class="us-mod" value="'+m[0]+'"'+((p.modulos||[]).includes(m[0])?' checked':'')+'/> '+m[1]+'</label>').join('')+'</td>'
+     +'<td><button class="btn btn-p btn-sm" onclick="saveUsuario(this)">Guardar</button></td></tr>';
+  }).join('')||'<tr><td colspan="6" class="empty">Sin usuarios</td></tr>';
+}
+async function saveUsuario(btn){
+  const tr=btn.closest('tr'),uid=tr.dataset.uid;
+  const upd={nombre:tr.querySelector('.us-nom').value.trim(),role:tr.querySelector('.us-rol').value,activo:tr.querySelector('.us-act').checked,modulos:[...tr.querySelectorAll('.us-mod:checked')].map(x=>x.value)};
+  btn.disabled=true;
+  const {error}=await sb.from('profiles').update(upd).eq('user_id',uid);
+  btn.disabled=false;
+  if(error){usrMsg('✕ '+error.message,'err');return;}
+  usrMsg('✓ Permisos guardados','ok');loadUsuarios();
+}
+
+// ---- Entrada automática si ya hay sesión
+(async function(){
+  try{
+    if(typeof supabase==='undefined')return;
+    const {data}=await getAuth().auth.getSession();
+    if(data&&data.session){const ok=await enterApp(data.session.user); if(!ok){await getAuth().auth.signOut();}}
+  }catch(e){}
 })();
 </script>
 
