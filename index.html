@@ -52,9 +52,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sb-logo h1{color:#fff;font-size:14px;font-weight:600;}
 .sb-logo p{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;}
 .sb-nav{padding:10px 8px;flex:1;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,0.6);font-size:12.5px;transition:all 0.15s;margin-bottom:2px;user-select:none;}
-.nav-item:hover{background:rgba(255,255,255,0.09);color:#fff;}
-.nav-item.active{background:rgba(255,255,255,0.16);color:#fff;font-weight:500;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);cursor:pointer;color:var(--nav-text,rgba(255,255,255,0.6));font-size:12.5px;transition:all 0.15s;margin-bottom:2px;user-select:none;}
+.nav-item:hover{background:rgba(255,255,255,0.09);color:var(--nav-hover,#fff);}
+.nav-item.active{background:var(--nav-active,rgba(255,255,255,0.16));color:var(--nav-hover,#fff);font-weight:500;}
 .sb-bottom{padding:10px 8px 16px;border-top:1px solid rgba(255,255,255,0.1);}
 .db-row{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:11px;color:rgba(255,255,255,0.45);}
 .dot{width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0;}
@@ -273,6 +273,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="nav-item" data-mod="voucher">🖨 Voucher Ingreso</div>
       <div class="nav-item" data-mod="comparar">⇄ Comparar Meses</div>
       <div style="padding:10px 8px 4px"><button onclick="document.getElementById('bg-modal').classList.add('open')" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;gap:6px;justify-content:center;">🎨 Personalizar fondo</button></div>
+      <div style="padding:4px 8px 4px"><button id="backup-btn" type="button" onclick="descargarRespaldo()" style="width:100%;padding:7px 10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:5px;color:rgba(255,255,255,0.85);font-size:12px;cursor:pointer;font-family:inherit">⬇ Descargar respaldo</button></div>
       <div style="padding:4px 8px 4px"><button id="install-btn" type="button" style="width:100%;padding:7px 10px;background:#000;border:1px solid rgba(255,255,255,0.35);border-radius:5px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📲 Instalar app</button></div>
     </nav>
     <div class="sb-bottom">
@@ -381,6 +382,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <button class="btn btn-sm" style="background:var(--warn);border-color:var(--yellow);color:var(--gold)" onclick="applyDateAll()">📅 Aplicar a todas</button>
         <div class="vd"></div>
         <button class="btn btn-p" id="btn-guardar-todo" onclick="guardarTodo()">💾 Guardar todo</button>
+        <button class="btn btn-sm" style="background:var(--warn);border-color:var(--yellow);color:var(--gold)" onclick="descargarPlantilla()">📄 Plantilla Excel</button>
         <button class="btn btn-g btn-sm" id="btn-importar" onclick="document.getElementById('ing-xl').click()">⬆ Carga masiva Excel</button>
         <input type="file" id="ing-xl" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarExcel(this)"/>
         <!-- ✅ FIX: Limpiar ya NO elimina registros de BD -->
@@ -1590,7 +1592,7 @@ async function importarExcel(input){
       const fechaStr=parseFecha(r[2]);
       let mesR=mes,anio=2026;
       if(fechaStr&&fechaStr.includes('-')){const p=fechaStr.split('-');anio=parseInt(p[0])||2026;mesR=parseInt(p[1])||mes;}
-      return {cuenta:String(r[0]||'').trim(),maquina:String(r[1]||'').trim(),fecha_registro:fechaStr,
+      return {cuenta:String(r[0]||'').trim().toUpperCase(),maquina:String(r[1]||'').trim().toUpperCase(),fecha_registro:fechaStr,
         mes:mesR,anio,kg,costo_usd:parseFloat((kg*gPrecio(sku)).toFixed(4)),
         purga_color:parseFloat(r[4])||0,paneles_sin_frame:parseFloat(r[5])||0,
         kg_paneles_sin_frame:parseFloat(r[6])||0,paneles_malos:parseFloat(r[7])||0,
@@ -1601,7 +1603,9 @@ async function importarExcel(input){
         mp_sku:sku||null,mp_descripcion:sku?gDesc(sku):null,tipo_panel:'PURGA'};
     }).filter(r=>r.cuenta&&r.maquina&&(r.kg>0||r.paneles_sin_frame>0||r.paneles_malos>0));
     if(!recs.length){showAlert('ing','No hay filas válidas en el archivo','err');return;}
-    if(!confirm('Importar '+recs.length+' registros?')) return;
+    const omit=dataRows.length-recs.length,meses=[...new Set(recs.map(r=>r.anio+'-'+String(r.mes).padStart(2,'0')))].sort().join(', ');
+    const rc=[...new Set(recs.map(r=>r.cuenta).filter(c=>!CUENTAS.includes(c)))],rm=[...new Set(recs.map(r=>r.maquina).filter(m=>!MAQUINAS.includes(m)))],ns=[...new Set(recs.map(r=>r.mp_sku).filter(x=>x&&!maestro[x]))];
+    if(!confirm('Importar '+recs.length+' registros.\nMeses: '+meses+(omit?'\nFilas omitidas (sin cuenta/máquina o sin cantidades): '+omit:'')+(rc.length?'\n⚠ Cuentas no reconocidas: '+rc.join(', '):'')+(rm.length?'\n⚠ Máquinas no reconocidas: '+rm.join(', '):'')+(ns.length?'\n⚠ SKU sin precio en Data: '+ns.join(', '):'')+'\n\nSi ya subiste estos datos antes, se duplicarán.')) return;
     document.getElementById('ing-status').textContent='Importando...';
     const {error}=await sb.from('purgas').insert(recs);
     document.getElementById('ing-status').textContent='';
@@ -2862,6 +2866,13 @@ function exportDataCSV(){
           <label>Barra lateral</label><input type="color" id="th-sb" value="#1E3A2F" class="bg-pick"/>
           <label>Botones</label><input type="color" id="th-ac" value="#166534" class="bg-pick"/>
         </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px">
+          <label>Texto de módulos</label><input type="color" id="th-nt" value="#C9D1CC" class="bg-pick"/>
+          <label>Módulo activo</label><input type="color" id="th-na" value="#3A5A4C" class="bg-pick"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin-top:8px">
+          <label>Matiz</label><input type="range" id="th-hue" min="0" max="360" value="140" style="flex:1;height:14px;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);border-radius:7px"/>
+        </div>
       </div>
       <!-- Color sólido -->
       <div style="margin-bottom:18px">
@@ -3037,7 +3048,7 @@ document.addEventListener('DOMContentLoaded',function(){
 // ── TEMA, FONDOS INTERACTIVOS Y AJUSTES ────────────────
 (function(){
 const TK='purga_theme_2026',ZK='purga_zoom_2026';
-const THEMES=[['Verde','#1E3A2F','#166534'],['Azul','#1E3A5F','#1D4ED8'],['Negro','#0A0A0A','#1F2937'],['Morado','#3B1F5E','#6D28D9'],['Rojo','#4A1515','#B91C1C'],['Naranja','#4A2A0F','#C2410C'],['Turquesa','#134E4A','#0F766E'],['Rosa','#4A1535','#BE185D']];
+const THEMES=[['Verde','#1E3A2F','#166534'],['Azul','#1E3A5F','#1D4ED8'],['Negro','#0A0A0A','#1F2937'],['Morado','#3B1F5E','#6D28D9'],['Rojo','#4A1515','#B91C1C'],['Naranja','#4A2A0F','#C2410C'],['Turquesa','#134E4A','#0F766E'],['Rosa','#4A1535','#BE185D'],['Índigo','#1E1B4B','#4338CA'],['Lima','#1A2E05','#4D7C0F'],['Dorado','#3D2C05','#A16207'],['Cian','#083344','#0E7490'],['Granate','#3B0A1E','#9F1239'],['Pizarra','#1E293B','#475569'],['Marino','#0B1B3A','#1E40AF'],['Café','#2E1F14','#92400E']];
 const SOLIDS=['#FFFFFF','#F8FAFC','#FEF2F2','#FFE4E6','#FCE7F3','#F3E8FF','#E0E7FF','#DBEAFE','#CFFAFE','#CCFBF1','#D1FAE5','#ECFCCB','#FEF3C7','#FFEDD5','#E7E5E4','#D1D5DB','#94A3B8','#475569','#334155','#1F2937','#111827','#000000','#1E3A2F','#312E81','#4C1D95','#7F1D1D','#78350F','#064E3B'];
 const GRADS=[['#0f2027','#2c5364'],['#ff9966','#ff5e62'],['#a8edea','#fed6e3'],['#ffecd2','#fcb69f'],['#89f7fe','#66a6ff'],['#c471f5','#fa71cd'],['#0ba360','#3cba92'],['#f6d365','#fda085'],['#2b5876','#4e4376'],['#e0eafc','#cfdef3'],['#000000','#434343'],['#8e2de2','#4a00e0']];
 const MODES=[['particles','🔵 Partículas'],['aurora','🌌 Aurora'],['bubbles','🫧 Burbujas'],['stars','⭐ Estrellas'],['off','✖ Quitar']];
@@ -3062,6 +3073,20 @@ THEMES.forEach(t=>{const d=document.createElement('div');d.className='bg-swatch'
 $('th-sb').oninput=()=>applyTheme($('th-sb').value,$('th-ac').value);
 $('th-ac').oninput=()=>applyTheme($('th-sb').value,$('th-ac').value);
 try{const t=JSON.parse(localStorage.getItem(TK)||'null');if(t)applyTheme(t[0],t[1],false);}catch(e){}
+
+// ---- Matiz y colores del menú de módulos
+const hsl=(h,sa,l)=>{sa/=100;l/=100;const k=n=>(n+h/30)%12,a=sa*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');};
+$('th-hue').oninput=()=>{const h=+$('th-hue').value;applyTheme(hsl(h,45,17),hsl(h,65,32));};
+const NK='purga_nav_2026';
+function applyNav(t,a,save){
+  const r=document.documentElement.style;
+  r.setProperty('--nav-text',t);r.setProperty('--nav-active',a);r.setProperty('--nav-hover',lum(a)>.6?'#111827':'#fff');
+  $('th-nt').value=t;$('th-na').value=a;
+  if(save!==false)try{localStorage.setItem(NK,JSON.stringify([t,a]));}catch(e){}
+}
+$('th-nt').oninput=()=>applyNav($('th-nt').value,$('th-na').value);
+$('th-na').oninput=()=>applyNav($('th-nt').value,$('th-na').value);
+try{const n=JSON.parse(localStorage.getItem(NK)||'null');if(n)applyNav(n[0],n[1],false);}catch(e){}
 
 // ---- Más colores sólidos y degradados
 SOLIDS.forEach(c=>{const d=document.createElement('div');d.className='bg-swatch';d.dataset.v=c;d.style.background=c;d.title=c;
@@ -3186,8 +3211,110 @@ function applyZoom(v,save){document.querySelector('.main').style.zoom=v/100;$('z
 $('zoom-r').oninput=()=>applyZoom(parseInt($('zoom-r').value));
 try{const z=parseInt(localStorage.getItem(ZK));if(z)applyZoom(z,false);}catch(e){}
 
-window.resetLook=function(){applyTheme('#1E3A2F','#166534');applyZoom(100);sync(null);};
+window.resetLook=function(){applyTheme('#1E3A2F','#166534');applyZoom(100);sync(null);['--nav-text','--nav-active','--nav-hover'].forEach(v=>document.documentElement.style.removeProperty(v));try{localStorage.removeItem(NK);}catch(e){}};
 document.addEventListener('DOMContentLoaded',function(){sync(loadBgState());});
+})();
+</script>
+
+<script>
+// ── PLANTILLA DE CARGA MASIVA Y RESPALDO EN EXCEL ──────
+(function(){
+const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const HDR=['Cuenta','Máquina','Fecha (dd-mm-aaaa)','KG Purga','Purga color','Paneles sin frame','KG paneles sin frame','Paneles malos','KG panel','Medida','Altura','Slot','Descri','OF','Marcos','Peso real','SKU'];
+function sheet(wb,name,aoa){
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=(aoa[0]||[]).map((h,i)=>{let w=String(h).length+2;aoa.slice(1,120).forEach(r=>{w=Math.max(w,String(r[i]==null?'':r[i]).length+2);});return{wch:Math.min(Math.max(w,10),45)};});
+  ws['!freeze']={xSplit:0,ySplit:1};
+  XLSX.utils.book_append_sheet(wb,ws,name.substring(0,31));
+}
+window.descargarPlantilla=function(){
+  if(typeof XLSX==='undefined'){alert('No cargó la librería de Excel. Revisa tu conexión y recarga.');return;}
+  const wb=XLSX.utils.book_new();
+  sheet(wb,'Plantilla',[HDR]);
+  sheet(wb,'Ejemplo',[HDR,
+    ['IMPU','PRENSA 1','15-10-2026',12.5,0,0,0,0,0,'','','','','OF-1234',0,0,'GOM-RUB-NR6568-Pre'],
+    ['CMR','LG','16-10-2026',8,1.5,2,3.2,4,0.5,'305x305','38','SLOT','','OF-5678',10,45.5,'TPU-WAN-WHT-1185EC']]);
+  const maxL=Math.max(CUENTAS.length,MAQUINAS.length);
+  const ins=[['Columna','Qué poner'],
+    ['Cuenta','Obligatoria. Valores: '+CUENTAS.join(', ')],
+    ['Máquina','Obligatoria. Valores: '+MAQUINAS.join(', ')],
+    ['Fecha','dd-mm-aaaa (ej: 15-10-2026). El mes y el año se toman de la fecha'],
+    ['KG Purga','Número. Se necesita KG, paneles sin frame o paneles malos para que la fila cuente'],
+    ['SKU','Código tal como está en el módulo Data (de ahí sale el precio y el costo)'],
+    ['Importante','Llena la hoja "Plantilla" (la primera). No cambies el orden de las columnas ni borres encabezados'],
+    ['Importante','Si subes dos veces el mismo archivo, los registros se duplican']];
+  sheet(wb,'Instrucciones',ins);
+  const sk=[['SKU','Descripción','Precio unitario']];Object.keys(maestro||{}).sort().forEach(k=>sk.push([k,maestro[k].descripcion||'',maestro[k].precio_unitario||0]));
+  sheet(wb,'SKU válidos',sk);
+  XLSX.writeFile(wb,'Plantilla_Carga_Masiva_Purga.xlsx');
+};
+
+async function fetchAll(table){
+  const out=[];
+  for(let from=0;;from+=1000){
+    const {data,error}=await sb.from(table).select('*').order(table==='purgas'?'id':'sku').range(from,from+999);
+    if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break;
+  }
+  return out;
+}
+const kgB=r=>(+r.kg||0)+(+r.purga_color||0)+(+r.kg_paneles_sin_frame||0);
+const sku=r=>r.mp_sku||r.sku||'';
+const rd=x=>Math.round((+x||0)*100)/100;
+function pivot(rows,keyOf,valOf,extra){
+  const m={};
+  rows.forEach(r=>{const k=r.anio+'|'+keyOf(r);const o=m[k]||(m[k]={a:r.anio,k:keyOf(r),v:Array(12).fill(0)});o.v[(parseInt(r.mes)||1)-1]+=valOf(r);});
+  const tot=o=>o.v.reduce((x,y)=>x+y,0);
+  return Object.values(m).sort((a,b)=>(a.a-b.a)||(tot(b)-tot(a))).map(o=>[o.a,...extra(o.k),...o.v.map(rd),rd(tot(o))]);
+}
+window.descargarRespaldo=async function(){
+  const btn=document.getElementById('backup-btn');
+  if(!sb){alert('Primero inicia sesión.');return;}
+  if(typeof XLSX==='undefined'){alert('No cargó la librería de Excel. Revisa tu conexión y recarga.');return;}
+  const t0=btn.textContent;btn.disabled=true;btn.textContent='⏳ Preparando respaldo...';
+  try{
+    await loadMaestro();
+    const all=await fetchAll('purgas'),rows=all.filter(r=>(r.tipo_panel||'PURGA')==='PURGA'),mae=await fetchAll('maestro_sku');
+    const wb=XLSX.utils.book_new(),C=r=>calcCostos(r);
+    // Dashboard
+    const tKg=rows.reduce((a,r)=>a+kgB(r),0),tMP=rows.reduce((a,r)=>a+C(r).costoMP,0),tPan=all.reduce((a,r)=>a+C(r).costoPan,0),tPm=all.reduce((a,r)=>a+(+r.paneles_malos||0),0);
+    sheet(wb,'Dashboard',[['Indicador','Valor'],['Fecha del respaldo',new Date().toLocaleString('es-CL')],['Total KG purga',rd(tKg)],['Costo MP total',rd(tMP)],['Costo total paneles malos',rd(tPan)],['Registros de purga',rows.length],['Total paneles malos (un)',tPm]]);
+    const pm={};all.forEach(r=>{const k=r.anio+'|'+String(r.mes).padStart(2,'0');const o=pm[k]||(pm[k]={a:r.anio,m:+r.mes,kg:0,mp:0,cp:0,n:0,pm:0});if((r.tipo_panel||'PURGA')==='PURGA'){o.kg+=kgB(r);o.mp+=C(r).costoMP;o.n++;}o.cp+=C(r).costoPan;o.pm+=(+r.paneles_malos||0);});
+    const meses=Object.keys(pm).sort().map(k=>pm[k]);
+    sheet(wb,'Dashboard x Mes',[['Año','Mes','KG Purga','Costo MP','Registros','Paneles malos (un)','Costo paneles malos'],...meses.map(o=>[o.a,MES[o.m-1]||o.m,rd(o.kg),rd(o.mp),o.n,o.pm,rd(o.cp)])]);
+    // Ingreso Purga (mismo orden que la plantilla: se puede volver a subir)
+    sheet(wb,'Ingreso Purga',[HDR,...rows.map(r=>[r.cuenta,r.maquina,r.fecha_registro||'',+r.kg||0,+r.purga_color||0,+r.paneles_sin_frame||0,+r.kg_paneles_sin_frame||0,+r.paneles_malos||0,+r.kg_panel||0,r.medida||'',r.altura==null?'':r.altura,r.slot||'',r.descri||'',r.of_numero||'',+r.marcos||0,+r.peso_real||0,sku(r)])]);
+    // Resumen Purga
+    sheet(wb,'Resumen Purga',[['ID','Fecha','Mes','Año','Cuenta','Máquina','SKU','Descripción','KG Purga','Purga color','KG paneles sin frame','KG total','Paneles malos','Precio MP','Costo MP','Costo un. paneles','Costo paneles malos','Medida','Altura','Slot','Descri','OF','Marcos','Peso real'],
+      ...rows.map(r=>{const c=C(r);return[r.id,r.fecha_registro||'',r.mes,r.anio,r.cuenta,r.maquina,sku(r),gDesc(sku(r)),+r.kg||0,+r.purga_color||0,+r.kg_paneles_sin_frame||0,rd(kgB(r)),+r.paneles_malos||0,c.pMP,rd(c.costoMP),c.cPan,rd(c.costoPan),r.medida||'',r.altura==null?'':r.altura,r.slot||'',r.descri||'',r.of_numero||'',+r.marcos||0,+r.peso_real||0];})]);
+    // Análisis Purga
+    const hm=['Año','SKU','Descripción',...MES,'Total'],hc=n=>['Año',n,...MES,'Total'],xm=k=>[k,gDesc(k)],xc=k=>[k];
+    sheet(wb,'Analisis KG Material',[hm,...pivot(rows,sku,kgB,xm)]);
+    sheet(wb,'Analisis Costo Material',[hm,...pivot(rows,sku,r=>C(r).costoMP,xm)]);
+    sheet(wb,'Analisis KG Cuenta',[hc('Cuenta'),...pivot(rows,r=>r.cuenta,kgB,xc)]);
+    sheet(wb,'Analisis Costo Cuenta',[hc('Cuenta'),...pivot(rows,r=>r.cuenta,r=>C(r).costoMP,xc)]);
+    sheet(wb,'Analisis KG Maquina',[hc('Máquina'),...pivot(rows,r=>r.maquina,kgB,xc)]);
+    sheet(wb,'Analisis Costo Maquina',[hc('Máquina'),...pivot(rows,r=>r.maquina,r=>C(r).costoMP,xc)]);
+    // Paneles Malos
+    const pan=all.filter(r=>(+r.paneles_malos||0)>0);
+    sheet(wb,'Paneles Malos Detalle',[['ID','Fecha','Mes','Año','Cuenta','Máquina','SKU','Descripción','Paneles malos (un)','Costo un. paneles','Costo paneles malos'],...pan.map(r=>[r.id,r.fecha_registro||'',r.mes,r.anio,r.cuenta,r.maquina,sku(r),gDesc(sku(r)),+r.paneles_malos||0,gCPan(sku(r)),rd(C(r).costoPan)])]);
+    sheet(wb,'Paneles Malos x Material',[hm,...pivot(pan,sku,r=>+r.paneles_malos||0,xm)]);
+    sheet(wb,'Paneles Malos Costo Mat',[hm,...pivot(pan,sku,r=>C(r).costoPan,xm)]);
+    sheet(wb,'Paneles Malos x Cuenta',[hc('Cuenta'),...pivot(pan,r=>r.cuenta,r=>+r.paneles_malos||0,xc)]);
+    sheet(wb,'Paneles Malos x Maquina',[hc('Máquina'),...pivot(pan,r=>r.maquina,r=>+r.paneles_malos||0,xc)]);
+    // Data
+    sheet(wb,'Data Maestro SKU',[['SKU','Descripción','Precio unitario','Unidad de medida','Costo un. paneles'],...mae.map(r=>[r.sku,r.descripcion||'',+r.precio_unitario||0,r.unidad_medida||'',+r.costo_un_paneles||0])]);
+    // Voucher Ingreso
+    const vg={};rows.forEach(r=>{const k=(r.fecha_registro||'')+'|'+r.cuenta;const o=vg[k]||(vg[k]={f:r.fecha_registro||'',c:r.cuenta,n:0,kg:0,pc:0,ks:0,pm:0,mp:0,cp:0});o.n++;o.kg+=+r.kg||0;o.pc+=+r.purga_color||0;o.ks+=+r.kg_paneles_sin_frame||0;o.pm+=+r.paneles_malos||0;o.mp+=C(r).costoMP;o.cp+=C(r).costoPan;});
+    sheet(wb,'Voucher Ingreso',[['Fecha','Cuenta','Registros','KG Purga','Purga color','KG paneles sin frame','Paneles malos (un)','Costo MP','Costo paneles malos'],...Object.keys(vg).sort().map(k=>{const o=vg[k];return[o.f,o.c,o.n,rd(o.kg),rd(o.pc),rd(o.ks),o.pm,rd(o.mp),rd(o.cp)];})]);
+    // Comparar Meses
+    const pct=(a,b)=>b?Math.round((a-b)/b*1000)/10:'';
+    sheet(wb,'Comparar Meses',[['Año','Mes','KG Purga','Var. KG % vs mes anterior','Costo MP','Var. costo % vs mes anterior','Paneles malos (un)','Costo paneles malos'],...meses.map((o,i)=>[o.a,MES[o.m-1]||o.m,rd(o.kg),i?pct(o.kg,meses[i-1].kg):'',rd(o.mp),i?pct(o.mp,meses[i-1].mp):'',o.pm,rd(o.cp)])]);
+    const f=new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb,'Respaldo_Purga_'+f+'.xlsx');
+    alert('✓ Respaldo listo: '+wb.SheetNames.length+' hojas, '+all.length+' registros de purga en total.');
+  }catch(e){alert('No se pudo generar el respaldo: '+(e.message||e));}
+  btn.disabled=false;btn.textContent=t0;
+};
 })();
 </script>
 
