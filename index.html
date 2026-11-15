@@ -290,7 +290,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <span class="role-tag" id="u-role">—</span>
         <span class="logout-btn" id="logout-btn">Salir</span>
       </div>
-      <div style="padding:0 12px 4px"><span onclick="cambiarPass()" style="font-size:10px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline">🔑 Cambiar contraseña</span></div>
+      <div style="padding:0 12px 4px"><span onclick="cambiarPass()" style="font-size:10px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline">🔑 Cambiar contraseña</span> · <span onclick="configurar2FA()" style="font-size:10px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline">🛡 2 pasos</span></div>
     </div>
   </aside>
 
@@ -644,7 +644,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
       <div class="page-hdr"><div><h2>📜 Movimientos</h2><p>Registro de todo lo que hace cada usuario · solo visible para el superadmin</p></div></div>
       <div class="toolbar">
         <div class="cg"><label>Usuario</label><select id="au-user" onchange="loadAuditoria()"><option value="">Todos</option></select></div>
-        <div class="cg"><label>Acción</label><select id="au-acc" onchange="loadAuditoria()"><option value="">Todas</option><option>INSERT</option><option>UPDATE</option><option>DELETE</option><option>LOGIN</option><option>LOGOUT</option><option>IMPORT</option><option>BACKUP</option><option>PASSWORD</option></select></div>
+        <div class="cg"><label>Acción</label><select id="au-acc" onchange="loadAuditoria()"><option value="">Todas</option><option>INSERT</option><option>UPDATE</option><option>DELETE</option><option>LOGIN</option><option>LOGOUT</option><option>IMPORT</option><option>BACKUP</option><option>PASSWORD</option><option>EXPORT</option><option>SYNC</option><option>2FA</option></select></div>
         <div class="cg"><label>Módulo</label><select id="au-tab" onchange="loadAuditoria()"><option value="">Todos</option><option value="purgas">Purga</option><option value="maestro_sku">Data (SKU)</option><option value="profiles">Usuarios</option></select></div>
         <div class="cg"><label>Desde</label><input type="date" id="au-d1" onchange="loadAuditoria()"/></div>
         <div class="cg"><label>Hasta</label><input type="date" id="au-d2" onchange="loadAuditoria()"/></div>
@@ -928,6 +928,7 @@ async function doLogin(){
       const m=(error&&error.message)||'sin respuesta del servidor';
       return fail(m==='Invalid login credentials'?'Usuario o contraseña incorrectos':'Error: '+m);
     }
+    if(!(await mfaChallenge())){ await A.auth.signOut(); return fail('Código de verificación incorrecto'); }
     const ok=await enterApp(data.user);
     if(!ok){ await A.auth.signOut(); return fail('Tu usuario está pendiente o desactivado. Pide acceso a LBUSTOS.'); }
     errEl.classList.remove('show'); btn.textContent='Ingresar'; btn.disabled=false;
@@ -1591,18 +1592,29 @@ async function importarExcel(input){
         descri:String(r[12]||'').trim(),of_numero:String(r[13]||'').trim(),
         marcos:parseInt(r[14])||0,peso_real:parseFloat(r[15])||0,
         mp_sku:sku||null,mp_descripcion:sku?gDesc(sku):null,tipo_panel:'PURGA'};
-    }).filter(r=>r.cuenta&&r.maquina&&(r.kg>0||r.paneles_sin_frame>0||r.paneles_malos>0));
+    }).filter(r=>r.cuenta&&r.maquina&&(r.kg>0||r.paneles_sin_frame>0||r.paneles_malos>0||r.purga_color>0||r.kg_paneles_sin_frame>0));
     if(!recs.length){showAlert('ing','No hay filas válidas en el archivo','err');return;}
+    const fch=recs.map(r=>r.fecha_registro).filter(Boolean).sort();
+    let nuevos=recs,dups=0;
+    if(fch.length){
+      document.getElementById('ing-status').textContent='Revisando duplicados...';
+      const ex=await sb.from('purgas').select('fecha_registro,cuenta,maquina,mp_sku,kg,purga_color,kg_paneles_sin_frame,paneles_malos,of_numero').gte('fecha_registro',fch[0]).lte('fecha_registro',fch[fch.length-1]);
+      document.getElementById('ing-status').textContent='';
+      const kf=r=>[String(r.fecha_registro||'').slice(0,10),r.cuenta,r.maquina,r.mp_sku||'',+r.kg||0,+r.purga_color||0,+r.kg_paneles_sin_frame||0,+r.paneles_malos||0,r.of_numero||''].join('|');
+      const cnt={};(ex.data||[]).forEach(r=>{const k=kf(r);cnt[k]=(cnt[k]||0)+1;});
+      nuevos=recs.filter(r=>{const k=kf(r);if(cnt[k]>0){cnt[k]--;dups++;return false;}return true;});
+      if(!nuevos.length){showAlert('ing','Los '+recs.length+' registros del archivo ya existen. No se importó nada.','err');input.value='';return;}
+    }
     const omit=dataRows.length-recs.length,meses=[...new Set(recs.map(r=>r.anio+'-'+String(r.mes).padStart(2,'0')))].sort().join(', ');
     const rc=[...new Set(recs.map(r=>r.cuenta).filter(c=>!CUENTAS.includes(c)))],rm=[...new Set(recs.map(r=>r.maquina).filter(m=>!MAQUINAS.includes(m)))],ns=[...new Set(recs.map(r=>r.mp_sku).filter(x=>x&&!maestro[x]))];
-    if(!confirm('Importar '+recs.length+' registros.\nMeses: '+meses+(omit?'\nFilas omitidas (sin cuenta/máquina o sin cantidades): '+omit:'')+(rc.length?'\n⚠ Cuentas no reconocidas: '+rc.join(', '):'')+(rm.length?'\n⚠ Máquinas no reconocidas: '+rm.join(', '):'')+(ns.length?'\n⚠ SKU sin precio en Data: '+ns.join(', '):'')+'\n\nSi ya subiste estos datos antes, se duplicarán.')) return;
+    if(!confirm('Importar '+nuevos.length+' registros nuevos'+(dups?' ('+dups+' ya existían y se omiten)':'')+'.\nMeses: '+meses+(omit?'\nFilas omitidas (sin cuenta/máquina o sin cantidades): '+omit:'')+(rc.length?'\n⚠ Cuentas no reconocidas: '+rc.join(', '):'')+(rm.length?'\n⚠ Máquinas no reconocidas: '+rm.join(', '):'')+(ns.length?'\n⚠ SKU sin precio en Data: '+ns.join(', '):'')+'\n\nLos registros idénticos a los que ya existen se omiten automáticamente.')) return;
     document.getElementById('ing-status').textContent='Importando...';
-    const {error}=await sb.from('purgas').insert(recs);
+    const {error}=await sb.from('purgas').insert(nuevos);
     document.getElementById('ing-status').textContent='';
     input.value='';
     if(error){showAlert('ing','Error: '+error.message,'err');return;}
-    showAlert('ing','✓ '+recs.length+' registros importados','ok');
-    logAudit('IMPORT','Carga masiva: '+recs.length+' registros ('+meses+')','purgas');
+    showAlert('ing','✓ '+nuevos.length+' registros importados'+(dups?' ('+dups+' duplicados omitidos)':''),'ok');
+    logAudit('IMPORT','Carga masiva: '+nuevos.length+' registros nuevos, '+dups+' duplicados omitidos ('+meses+')','purgas');
     loadRecientes();
   };
   reader.readAsArrayBuffer(file);
@@ -2947,6 +2959,23 @@ function exportDataCSV(){
 .chip{padding:6px 11px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text)}
 .chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .bg-dark .page-hdr h2{color:#fff}.bg-dark .page-hdr p{color:rgba(255,255,255,.72)}
+#nav-toggle{display:none;position:fixed;top:10px;left:10px;z-index:150;width:40px;height:40px;border-radius:10px;border:0;background:var(--sidebar);color:#fff;font-size:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+#nav-ov{display:none}
+#q-badge{margin:4px 12px;padding:4px 8px;border-radius:6px;background:#B45309;color:#fff;font-size:11px;text-align:center}
+.toast-q{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:9000;max-width:90vw;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#off-banner{display:none;position:fixed;top:0;left:0;right:0;background:#B45309;color:#fff;text-align:center;font-size:12px;padding:5px;z-index:9500}
+#last-ing{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500}
+@media(max-width:900px){
+ #nav-toggle{display:block}
+ .sidebar{transform:translateX(-105%);transition:transform .25s}
+ body.nav-open .sidebar{transform:none;box-shadow:4px 0 24px rgba(0,0,0,.35)}
+ body.nav-open #nav-toggle{left:230px}
+ body.nav-open #nav-ov{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99}
+ .main{margin-left:0;padding:58px 14px 20px}
+ .kpi-grid{grid-template-columns:repeat(2,1fr)}
+ .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ #bg-canvas{left:0!important;width:100%!important}
+}
 </style>
 
 <script>
@@ -3302,6 +3331,7 @@ window.descargarRespaldo=async function(){
     sheet(wb,'Comparar Meses',[['Año','Mes','KG Purga','Var. KG % vs mes anterior','Costo MP','Var. costo % vs mes anterior','Paneles malos (un)','Costo paneles malos'],...meses.map((o,i)=>[o.a,MES[o.m-1]||o.m,rd(o.kg),i?pct(o.kg,meses[i-1].kg):'',rd(o.mp),i?pct(o.mp,meses[i-1].mp):'',o.pm,rd(o.cp)])]);
     const f=new Date().toISOString().slice(0,10);
     XLSX.writeFile(wb,'Respaldo_Purga_'+f+'.xlsx');
+    try{localStorage.setItem('purga_last_backup',String(Date.now()));}catch(e){}
     logAudit('BACKUP','Respaldo Excel: '+all.length+' registros, '+wb.SheetNames.length+' hojas');
     alert('✓ Respaldo listo: '+wb.SheetNames.length+' hojas, '+all.length+' registros de purga en total.');
   }catch(e){alert('No se pudo generar el respaldo: '+(e.message||e));}
@@ -3317,7 +3347,7 @@ const AU_MODS=[['dash','Dashboard'],['ingreso','Ingreso Purga'],['resumen','Resu
 const AU_ROLES=[['superadmin','Superadmin'],['admin','Administrador'],['editor','Editor'],['lectura','Lectura']];
 const AU_TAB={purgas:'Purga',maestro_sku:'Data (SKU)',profiles:'Usuarios'};
 const escH=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function getAuth(){ if(!AU_client) AU_client=supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}}); return AU_client; }
+function getAuth(){ if(!AU_client) AU_client=wrapClient(supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}})); return AU_client; }
 
 async function enterApp(u){
   const r=await getAuth().from('profiles').select('*').eq('user_id',u.id).single();
@@ -3399,7 +3429,7 @@ async function loadAuditoria(reset){
   const body=document.getElementById('au-body');
   if(error){body.innerHTML='<tr><td colspan="5" class="empty">Error: '+escH(error.message)+'</td></tr>';return;}
   AU_rows=AU_rows.concat(data||[]);AU_off=AU_rows.length;
-  body.innerHTML=AU_rows.length?AU_rows.map(r=>'<tr><td style="white-space:nowrap">'+escH(new Date(r.created_at).toLocaleString('es-CL'))+'</td><td><b>'+escH(r.username||'—')+'</b></td><td>'+escH(r.accion)+'</td><td>'+escH(AU_TAB[r.tabla]||r.tabla||'Sistema')+'</td><td style="font-size:12px">'+escH(auResumen(r))+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Sin movimientos</td></tr>';
+  body.innerHTML=AU_rows.length?AU_rows.map((r,ix)=>'<tr><td style="white-space:nowrap">'+escH(new Date(r.created_at).toLocaleString('es-CL'))+'</td><td><b>'+escH(r.username||'—')+'</b></td><td>'+escH(r.accion)+'</td><td>'+escH(AU_TAB[r.tabla]||r.tabla||'Sistema')+'</td><td style="font-size:12px">'+escH(auResumen(r))+(r.accion==='DELETE'&&r.detalle&&r.detalle.antes&&(r.tabla==='purgas'||r.tabla==='maestro_sku')?' <button class="btn btn-sm" data-i="'+ix+'" onclick="restaurarMov(+this.dataset.i)">↩ Restaurar</button>':'')+'</td></tr>').join(''):'<tr><td colspan="5" class="empty">Sin movimientos</td></tr>';
   document.getElementById('au-count').textContent=AU_rows.length+' de '+(count==null?AU_rows.length:count)+' movimientos';
   document.getElementById('au-more').style.display=(count!=null&&AU_rows.length<count)?'':'none';
 }
@@ -3424,7 +3454,7 @@ async function loadUsuarios(){
      +'<td><select class="us-rol"'+(me?' disabled':'')+'>'+AU_ROLES.map(r=>'<option value="'+r[0]+'"'+(p.role===r[0]?' selected':'')+'>'+r[1]+'</option>').join('')+'</select></td>'
      +'<td style="text-align:center"><input type="checkbox" class="us-act"'+(p.activo?' checked':'')+(me?' disabled':'')+'/></td>'
      +'<td style="font-size:12px;line-height:2">'+AU_MODS.map(m=>'<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" class="us-mod" value="'+m[0]+'"'+((p.modulos||[]).includes(m[0])?' checked':'')+'/> '+m[1]+'</label>').join('')+'</td>'
-     +'<td><button class="btn btn-p btn-sm" onclick="saveUsuario(this)">Guardar</button></td></tr>';
+     +'<td><button class="btn btn-p btn-sm" onclick="saveUsuario(this)">Guardar</button> <button class="btn btn-sm" title="Reiniciar contraseña" data-u="'+escH(p.username)+'" onclick="sqlReinicio(this.dataset.u)">🔑</button></td></tr>';
   }).join('')||'<tr><td colspan="6" class="empty">Sin usuarios</td></tr>';
 }
 async function saveUsuario(btn){
@@ -3442,7 +3472,7 @@ async function saveUsuario(btn){
   try{
     if(typeof supabase==='undefined')return;
     const {data}=await getAuth().auth.getSession();
-    if(data&&data.session){const ok=await enterApp(data.session.user); if(!ok){await getAuth().auth.signOut();}}
+    if(data&&data.session){const lv=(await getAuth().auth.mfa.getAuthenticatorAssuranceLevel()).data; if(lv&&lv.nextLevel==='aal2'&&lv.currentLevel!=='aal2'){await getAuth().auth.signOut();return;} const ok=await enterApp(data.session.user); if(!ok){await getAuth().auth.signOut();}}
   }catch(e){}
 })();
 </script>
@@ -3475,6 +3505,184 @@ function drawKgLine(){
   let t=null;const m=document.querySelector('.main');
   if(m)new MutationObserver(()=>{clearTimeout(t);t=setTimeout(fixHbars,120);}).observe(m,{childList:true,subtree:true});
   window.addEventListener('resize',()=>{clearTimeout(t);t=setTimeout(fixHbars,150);});
+})();
+</script>
+
+<script>
+// ── CAPA DE DATOS (paginación automática + cola sin conexión), 2 PASOS Y EXTRAS ──
+const DL_PK={purgas:'id',maestro_sku:'sku',profiles:'user_id',audit_log:'id'};
+const DL_Q='purga_cola_2026';
+let DL_FL=false,DL_BK=false;
+function dlLoad(){try{return JSON.parse(localStorage.getItem(DL_Q)||'[]');}catch(e){return [];}}
+function dlSave(a){try{localStorage.setItem(DL_Q,JSON.stringify(a));}catch(e){}dlBadge();}
+function dlBadge(){
+  const n=dlLoad().reduce(function(a,x){return a+x.rows.length;},0);let b=document.getElementById('q-badge');
+  if(!n){if(b)b.remove();return;}
+  if(!b){b=document.createElement('div');b.id='q-badge';const ur=document.getElementById('user-row');if(ur&&ur.parentNode)ur.parentNode.insertBefore(b,ur);}
+  b.textContent='📴 '+n+' registro(s) pendientes de enviar';
+}
+function dlToast(m){const t=document.createElement('div');t.className='toast-q';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove();},7000);}
+
+function wrapClient(c){
+  const orig=c.from.bind(c);c.rawFrom=orig;
+  const build=function(t,log,rg){let q=orig(t);log.forEach(function(l){q=q[l[0]].apply(q,l[1]);});if(rg)q=q.range(rg[0],rg[1]);return q;};
+  const run=async function(t,log){
+    const n=log.map(function(l){return l[0];});
+    // 1) SELECT sin límite: trae TODAS las filas (supera el tope de 1000 de Supabase)
+    if(n[0]==='select'&&!n.some(function(x){return ['range','limit','single','maybeSingle','csv'].indexOf(x)>=0;})&&!(log[0][1][1]&&log[0][1][1].head)){
+      const lg=log.slice();lg[0]=['select',[log[0][1][0]||'*',Object.assign({},log[0][1][1],{count:'exact'})]];
+      if(DL_PK[t])lg.push(['order',[DL_PK[t]]]);
+      let out=[],total=null;
+      for(let g=0;g<400;g++){
+        const r=await build(t,lg,[out.length,out.length+999]);
+        if(r.error)return r;
+        const d=r.data||[];out=out.concat(d);
+        if(r.count!=null)total=r.count;
+        if(!d.length||(total!=null?out.length>=total:d.length<1000))break;
+      }
+      return {data:out,error:null,count:out.length,status:200,statusText:'OK'};
+    }
+    // 2) INSERT de purgas sin internet: se guarda en la tablet y se envía después
+    if(n[0]==='insert'&&t==='purgas'){
+      let r;
+      if(!navigator.onLine)r={error:{message:'Failed to fetch'}};
+      else{try{r=await build(t,log);}catch(e){r={error:{message:String(e&&e.message||e)}};}}
+      if(r.error&&/failed to fetch|networkerror|load failed|network request/i.test(r.error.message||'')){
+        const rows=[].concat(log[0][1][0]);
+        const q=dlLoad();q.push({t:Date.now(),uid:currentUser&&currentUser.id,rows:rows,n:0});dlSave(q);
+        dlToast('📴 Sin conexión: '+rows.length+' registro(s) guardados en esta tablet. Se enviarán solos al volver internet.');
+        return {data:null,error:null,queued:true};
+      }
+      return r;
+    }
+    return build(t,log);
+  };
+  const mk=function(t,log){return new Proxy({},{get:function(_,name){
+    if(name==='then')return function(a,b){return run(t,log).then(a,b);};
+    if(name==='catch')return function(b){return run(t,log).catch(b);};
+    if(name==='finally')return function(f){return run(t,log).finally(f);};
+    return function(){return mk(t,log.concat([[name,Array.prototype.slice.call(arguments)]]));};
+  }});};
+  c.from=function(t){return mk(t,[]);};
+  return c;
+}
+async function flushQ(){
+  if(DL_FL||!currentUser||!navigator.onLine)return;
+  const q=dlLoad();if(!q.length)return;DL_FL=true;
+  try{
+    let sent=0;const keep=[];
+    for(const it of q){
+      if(it.uid!==currentUser.id||(it.n||0)>=5){keep.push(it);continue;}
+      const r=await getAuth().rawFrom('purgas').insert(it.rows);
+      if(r.error){it.n=(it.n||0)+1;keep.push(it);if(it.n>=5)dlToast('⚠ No se pudo enviar un grupo guardado sin conexión: '+r.error.message);}
+      else sent+=it.rows.length;
+    }
+    dlSave(keep);
+    if(sent){dlToast('✓ '+sent+' registro(s) guardados sin conexión ya se enviaron');logAudit('SYNC','Cola sin conexión: '+sent+' registros enviados','purgas');if(typeof loadRecientes==='function')loadRecientes();}
+  }catch(e){}
+  DL_FL=false;
+}
+
+// ---- Verificación en 2 pasos (TOTP)
+async function mfaChallenge(){
+  const A=getAuth();
+  try{
+    const lv=(await A.auth.mfa.getAuthenticatorAssuranceLevel()).data;
+    if(!lv||lv.nextLevel!=='aal2'||lv.currentLevel==='aal2')return true;
+    const fs=(await A.auth.mfa.listFactors()).data,f=((fs&&fs.totp)||[]).find(function(x){return x.status==='verified';});
+    if(!f)return true;
+    for(let i=0;i<3;i++){
+      const code=prompt('🛡 Verificación en 2 pasos\nIngresa el código de 6 dígitos de tu app autenticadora'+(i?' (intento '+(i+1)+' de 3)':''));
+      if(!code)return false;
+      const r=await A.auth.mfa.challengeAndVerify({factorId:f.id,code:code.trim()});
+      if(!r.error)return true;
+    }
+    return false;
+  }catch(e){return true;}
+}
+async function configurar2FA(){
+  const A=getAuth();
+  const fs=(await A.auth.mfa.listFactors()).data,f=((fs&&fs.totp)||[]).find(function(x){return x.status==='verified';});
+  if(f){
+    if(!confirm('🛡 La verificación en 2 pasos está ACTIVADA.\n\n¿Quieres desactivarla?'))return;
+    const r=await A.auth.mfa.unenroll({factorId:f.id});
+    if(r.error){alert('No se pudo desactivar: '+r.error.message);return;}
+    logAudit('2FA','Verificación en 2 pasos desactivada');alert('Desactivada.');return;
+  }
+  for(const x of ((fs&&fs.all)||[]).filter(function(x){return x.status!=='verified';})){try{await A.auth.mfa.unenroll({factorId:x.id});}catch(e){}}
+  const en=await A.auth.mfa.enroll({factorType:'totp',friendlyName:'Purga '+new Date().toISOString().slice(0,10)});
+  if(en.error){alert('No se pudo iniciar: '+en.error.message);return;}
+  const d=en.data,ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9800;display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.innerHTML='<div style="background:#fff;border-radius:14px;padding:22px;max-width:360px;width:100%;text-align:center;font-size:13px;color:#111827"><div style="font-weight:600;font-size:15px;margin-bottom:8px">🛡 Verificación en 2 pasos</div><p style="color:#6B7280;margin-bottom:10px">1. Escanea el QR con Google Authenticator o Microsoft Authenticator.<br>2. Escribe el código de 6 dígitos que muestra.</p><img id="mfa-qr" style="width:180px;height:180px"/><div id="mfa-sec" style="font-size:10px;color:#6B7280;word-break:break-all;margin:6px 0 10px"></div><input id="mfa-code" inputmode="numeric" maxlength="6" placeholder="000000" style="width:100%;padding:9px;border:1px solid #D1D5DB;border-radius:8px;text-align:center;font-size:18px;letter-spacing:6px;margin-bottom:8px"/><div id="mfa-msg" style="color:#B91C1C;min-height:16px;font-size:12px;margin-bottom:6px"></div><div style="display:flex;gap:8px"><button id="mfa-no" class="btn" style="flex:1">Cancelar</button><button id="mfa-ok" class="btn btn-p" style="flex:1">Activar</button></div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#mfa-qr').src=d.totp.qr_code;
+  ov.querySelector('#mfa-sec').textContent='Clave manual: '+d.totp.secret;
+  ov.querySelector('#mfa-no').onclick=async function(){try{await A.auth.mfa.unenroll({factorId:d.id});}catch(e){}ov.remove();};
+  ov.querySelector('#mfa-ok').onclick=async function(){
+    const code=ov.querySelector('#mfa-code').value.trim();
+    const r=await A.auth.mfa.challengeAndVerify({factorId:d.id,code:code});
+    if(r.error){ov.querySelector('#mfa-msg').textContent='Código incorrecto, intenta de nuevo';return;}
+    logAudit('2FA','Verificación en 2 pasos activada');ov.remove();
+    alert('✓ Verificación en 2 pasos activada. Desde ahora te pedirá el código al iniciar sesión.');
+  };
+}
+
+// ---- Movimientos: restaurar eliminados · Usuarios: SQL de reinicio
+async function restaurarMov(i){
+  const r=AU_rows[i];if(!r||!r.detalle||!r.detalle.antes)return;
+  if(!confirm('¿Restaurar este registro eliminado?\n'+auResumen(r)))return;
+  const e=await sb.from(r.tabla).insert(r.detalle.antes);
+  if(e.error){alert('No se pudo restaurar: '+e.error.message);return;}
+  alert('✓ Registro restaurado');loadAuditoria();
+}
+function sqlReinicio(u){prompt('Copia este SQL, cambia NUEVA-CLAVE y ejecútalo en Supabase > SQL Editor:',"update auth.users set encrypted_password = crypt('NUEVA-CLAVE', gen_salt('bf')) where email = '"+u+"@"+CFG.domain+"';");}
+
+// ---- Dashboard: último ingreso
+async function showLastIng(){
+  try{
+    if(!sb)return;
+    const r=await sb.from('purgas').select('fecha_registro').order('fecha_registro',{ascending:false}).limit(1);
+    const f=r.data&&r.data[0]&&r.data[0].fecha_registro;if(!f)return;
+    const fs=String(f).slice(0,10),hoy=new Date();hoy.setHours(0,0,0,0);
+    const dias=Math.round((hoy-new Date(fs+'T00:00:00'))/86400000);
+    let el=document.getElementById('last-ing');
+    if(!el){const h=document.querySelector('#mod-dash .page-hdr > div');if(!h)return;el=document.createElement('div');el.id='last-ing';h.appendChild(el);}
+    const col=dias<=1?['#DCFCE7','#166534']:dias<=3?['#FEF3C7','#92400E']:['#FEE2E2','#991B1B'];
+    el.style.background=col[0];el.style.color=col[1];
+    el.textContent='Último ingreso: '+fs.split('-').reverse().join('-')+(dias>0?' · hace '+dias+' día'+(dias>1?'s':''):' · hoy');
+  }catch(e){}
+}
+if(typeof loadDash==='function'){const _ld=loadDash;loadDash=async function(){const r=await _ld.apply(this,arguments);showLastIng();return r;};}
+
+// ---- Excel de la tabla visible (Resumen)
+function exportTabla(mod,nombre){
+  const t=document.querySelector('#'+mod+' table');
+  if(!t||typeof XLSX==='undefined'){alert('No hay tabla para exportar.');return;}
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.table_to_sheet(t),nombre.substring(0,31));
+  XLSX.writeFile(wb,nombre+'_'+new Date().toISOString().slice(0,10)+'.xlsx');logAudit('EXPORT','Exportó '+nombre+' a Excel');
+}
+(function(){
+  const tb=document.querySelector('#mod-resumen .toolbar');
+  if(tb){const b=document.createElement('button');b.className='btn btn-g btn-sm';b.textContent='⬇ Excel';b.onclick=function(){exportTabla('mod-resumen','Resumen_Purga');};tb.appendChild(b);}
+})();
+
+// ---- Menú en celular, aviso sin conexión y recordatorio de respaldo
+(function(){
+  const b=document.createElement('button');b.id='nav-toggle';b.type='button';b.textContent='☰';b.onclick=function(){document.body.classList.toggle('nav-open');};
+  const o=document.createElement('div');o.id='nav-ov';o.onclick=function(){document.body.classList.remove('nav-open');};
+  document.body.appendChild(b);document.body.appendChild(o);
+  document.querySelectorAll('.nav-item').forEach(function(n){n.addEventListener('click',function(){document.body.classList.remove('nav-open');});});
+  const ob=document.createElement('div');ob.id='off-banner';ob.textContent='📴 Sin conexión · lo que ingreses se guardará en esta tablet y se enviará al volver internet';document.body.appendChild(ob);
+  const up=function(){ob.style.display=navigator.onLine?'none':'block';if(navigator.onLine)flushQ();};
+  window.addEventListener('online',up);window.addEventListener('offline',up);up();
+  setInterval(function(){
+    if(!currentUser)return;
+    if(!DL_BK&&canDel()){DL_BK=true;const t=+localStorage.getItem('purga_last_backup')||0,d=t?Math.floor((Date.now()-t)/86400000):null;
+      if(d===null||d>=7)dlToast('⚠ '+(d===null?'Aún no has descargado un respaldo en esta tablet.':'Hace '+d+' días que no descargas un respaldo.')+' Usa ⬇ Descargar respaldo.');}
+    flushQ();
+  },5000);
+  dlBadge();
 })();
 </script>
 
