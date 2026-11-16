@@ -471,7 +471,7 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         </div>
         <div class="vd"></div>
         <button class="btn btn-p btn-sm" onclick="loadResumen()">↻</button>
-        <button class="btn btn-g btn-sm" onclick="exportResCSV()">⬇ Excel</button>
+        <button class="btn btn-g btn-sm" onclick="exportResFiltrado()">⬇ Excel</button>
       </div>
       <div class="alert" id="al-res"></div>
       <div class="cards">
@@ -1694,8 +1694,17 @@ async function loadResumen(){
   if(maq) q=q.eq('maquina',maq);
   const {data}=await q;
   allResumen=data||[];
+  fillResSelects(); applyResFilters();
+}
+let RES_VIEW=[];
+function renderResumen(){
+  if(!RES_VIEW.length){
+    document.getElementById('res-body').innerHTML='<tr><td colspan="21" class="empty">Sin registros con estos filtros</td></tr>';
+    ['rc-kg','rc-mp','rc-pan'].forEach(function(i){document.getElementById(i).textContent='—';});
+    document.getElementById('rc-reg').textContent='0 de '+allResumen.length;return;
+  }
   let html='',sumKg=0,sumMP=0,sumPan=0;
-  allResumen.forEach(r=>{
+  RES_VIEW.forEach(r=>{
     const c=calcCostos(r);
     sumKg+=parseFloat(r.kg)||0; sumMP+=c.costoMP; sumPan+=c.costoPan;
     html+='<tr>'
@@ -1722,7 +1731,7 @@ async function loadResumen(){
       +'<td class="tc" style="padding:3px 5px;white-space:nowrap">'+( isAdmin()?'<button class="btn btn-b btn-sm" onclick="openEditModal('+r.id+')">✏ Editar</button> <button class="del-btn" onclick="deleteResumen('+r.id+')">🗑</button>':'' )+'</td>'
       +'</tr>';
   });
-  html+='<tr class="tr-total-b"><td colspan="4" style="text-align:left;padding-left:12px">TOTALES — '+allResumen.length+' registros</td>'
+  html+='<tr class="tr-total-b"><td colspan="4" style="text-align:left;padding-left:12px">TOTALES — '+RES_VIEW.length+' registros</td>'
     +'<td class="tr">'+fmtN(sumKg)+'</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>'
     +'<td class="tr" style="background:#DBEAFE">—</td>'
     +'<td class="tr" style="background:#DBEAFE"><span style="color:var(--blue);font-weight:600">$'+fmtM(sumMP)+'</span></td>'
@@ -1733,7 +1742,7 @@ async function loadResumen(){
   document.getElementById('rc-kg').textContent=sumKg>0?fmtN(sumKg)+' kg':'—';
   document.getElementById('rc-mp').textContent=sumMP>0?'$'+fmtM(sumMP):'—';
   document.getElementById('rc-pan').textContent=sumPan>0?'$'+fmtM(sumPan):'—';
-  document.getElementById('rc-reg').textContent=allResumen.length;
+  document.getElementById('rc-reg').textContent=RES_VIEW.length===allResumen.length?RES_VIEW.length:RES_VIEW.length+' de '+allResumen.length;
 }
 function exportResCSV(){
   const h=['Cuenta','Maquina','Fecha','Mes','Kg','P_Color','P_SF','Kg_PSF','P_Malos','Kg_Panel','Medida','Altura','Slot','OF','MP_SKU','MP_Desc','CostoMP_KG','CostoMP_Total','CostoPan_UN','CostoPan_Total'];
@@ -3686,10 +3695,6 @@ function exportTabla(mod,nombre){
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.table_to_sheet(t),nombre.substring(0,31));
   XLSX.writeFile(wb,nombre+'_'+new Date().toISOString().slice(0,10)+'.xlsx');logAudit('EXPORT','Exportó '+nombre+' a Excel');
 }
-(function(){
-  const tb=document.querySelector('#mod-resumen .toolbar');
-  if(tb){const b=document.createElement('button');b.className='btn btn-g btn-sm';b.textContent='⬇ Excel';b.onclick=function(){exportTabla('mod-resumen','Resumen_Purga');};tb.appendChild(b);}
-})();
 
 // ---- Menú en celular, aviso sin conexión y recordatorio de respaldo
 (function(){
@@ -3827,6 +3832,100 @@ function drawPanelCharts(){
     const el=document.getElementById(p[0]);if(!el)return;let w=0;
     new ResizeObserver(function(){if(Math.abs(el.clientWidth-w)>2){w=el.clientWidth;if(PAN_ROWS.length)p[1]();}}).observe(el);
   });
+})();
+</script>
+
+<script>
+// ── FILTROS DEL RESUMEN DE PURGA (por columna, búsqueda, fechas) ──
+const RF=[
+ ['cuenta','sel',function(r){return r.cuenta||'';}],['maquina','sel',function(r){return r.maquina||'';}],['fecha','txt',function(r){return r.fecha_registro||'';}],['mes','sel',function(r){return String(r.mes||'');}],
+ ['kg','num',function(r){return +r.kg||0;}],['pc','num',function(r){return +r.purga_color||0;}],['psf','num',function(r){return +r.paneles_sin_frame||0;}],['kpsf','num',function(r){return +r.kg_paneles_sin_frame||0;}],['pm','num',function(r){return +r.paneles_malos||0;}],['kpan','num',function(r){return +r.kg_panel||0;}],
+ ['medida','sel',function(r){return String(r.medida||'');}],['altura','sel',function(r){return String(r.altura==null?'':r.altura);}],['slot','sel',function(r){return String(r.slot||'');}],['of','txt',function(r){return String(r.of_numero||'');}],
+ ['sku','sel',function(r){return r.mp_sku||r.sku||'';}],['desc','txt',function(r){return r.mp_descripcion||gDesc(r.mp_sku||r.sku||'')||'';}],
+ ['cmpkg','num',function(r){return calcCostos(r).pMP;}],['cmp','num',function(r){return calcCostos(r).costoMP;}],['cpan','num',function(r){return calcCostos(r).cPan;}],['cpant','num',function(r){return calcCostos(r).costoPan;}]];
+const RF_STYLE='width:100%;min-width:0;font-size:10px;padding:2px 3px;border:1px solid #D1D5DB;border-radius:3px;background:#fff;font-family:inherit';
+function resNum(txt,v){
+  const t=txt.trim().replace(',','.');if(!t)return true;
+  if(t==='*')return v!==0; if(t==='-')return v===0;
+  let m=t.match(/^(>=|<=|>|<|=)\s*(-?[\d.]+)$/);
+  if(m){const n=+m[2];return m[1]==='>'?v>n:m[1]==='<'?v<n:m[1]==='>='?v>=n:m[1]==='<='?v<=n:v===n;}
+  m=t.match(/^(-?[\d.]+)\s*-\s*(-?[\d.]+)$/);if(m)return v>=+m[1]&&v<=+m[2];
+  if(/^-?[\d.]+$/.test(t))return v===+t;
+  return true;
+}
+let RES_TMR=null;
+function resDeb(){clearTimeout(RES_TMR);RES_TMR=setTimeout(applyResFilters,250);}
+function fillResSelects(){
+  RF.forEach(function(c){
+    if(c[1]!=='sel')return;
+    const el=document.getElementById('rf-'+c[0]);if(!el)return;
+    const cur=el.value,set={};let vacio=false;
+    allResumen.forEach(function(r){const v=String(c[2](r));if(v==='')vacio=true;else set[v]=1;});
+    let keys=Object.keys(set);
+    keys.sort(c[0]==='mes'?function(a,b){return a-b;}:function(a,b){return a.localeCompare(b,'es',{numeric:true});});
+    el.innerHTML='';
+    const add=function(v,t){const o=document.createElement('option');o.value=v;o.textContent=t;el.appendChild(o);};
+    add('','Todos');keys.forEach(function(k){add(k,c[0]==='mes'?(MSL[k]||k):k);});if(vacio)add('__vacio__','(vacío)');
+    el.value=cur&&(set[cur]||cur==='__vacio__')?cur:'';
+  });
+}
+function resActive(){
+  if(['rs-q','rs-d1','rs-d2'].some(function(i){return document.getElementById(i)&&document.getElementById(i).value;}))return true;
+  return RF.some(function(c){const e=document.getElementById('rf-'+c[0]);return e&&e.value.trim();});
+}
+function applyResFilters(){
+  const q=(document.getElementById('rs-q').value||'').trim().toLowerCase(),d1=document.getElementById('rs-d1').value,d2=document.getElementById('rs-d2').value;
+  const f={};RF.forEach(function(c){const e=document.getElementById('rf-'+c[0]);f[c[0]]=e?e.value.trim():'';});
+  RES_VIEW=allResumen.filter(function(r){
+    const fd=String(r.fecha_registro||'').slice(0,10);
+    if(d1&&fd<d1)return false;if(d2&&fd>d2)return false;
+    if(q){const hay=[r.cuenta,r.maquina,r.fecha_registro,r.medida,r.altura,r.slot,r.of_numero,r.mp_sku||r.sku,r.mp_descripcion||gDesc(r.mp_sku||r.sku||'')].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false;}
+    for(let i=0;i<RF.length;i++){
+      const c=RF[i],val=f[c[0]];if(!val)continue;const g=c[2](r);
+      if(c[1]==='sel'){if(val==='__vacio__'){if(String(g)!=='')return false;}else if(String(g)!==val)return false;}
+      else if(c[1]==='txt'){if(String(g).toLowerCase().indexOf(val.toLowerCase())<0)return false;}
+      else if(!resNum(val,g))return false;
+    }
+    return true;
+  });
+  renderResumen();
+  const act=resActive(),ct=document.getElementById('rs-count'),cl=document.getElementById('rs-clear');
+  if(cl)cl.style.display=act?'':'none';
+  if(ct)ct.textContent=act?'Mostrando '+RES_VIEW.length+' de '+allResumen.length:'';
+}
+function clearResFilters(){
+  ['rs-q','rs-d1','rs-d2'].forEach(function(i){document.getElementById(i).value='';});
+  RF.forEach(function(c){const e=document.getElementById('rf-'+c[0]);if(e)e.value='';});
+  applyResFilters();
+}
+function exportResFiltrado(){
+  if(typeof XLSX==='undefined'){exportResCSV();return;}
+  const H=['Cuenta','Máquina','Fecha','Mes','Kg','P.Color','P.s/f','Kg p.s/f','P.Malos','Kg Pan','Medida','Altura','Slot','OF','MP SKU','MP Descripción','Costo MP KG','Costo MP Total','Costo Panel','Costo Total Panel'];
+  const rows=RES_VIEW.map(function(r){const c=calcCostos(r);return [r.cuenta,r.maquina,r.fecha_registro,MSL[r.mes]||r.mes,+r.kg||0,+r.purga_color||0,+r.paneles_sin_frame||0,+r.kg_paneles_sin_frame||0,+r.paneles_malos||0,+r.kg_panel||0,r.medida||'',r.altura==null?'':r.altura,r.slot||'',r.of_numero||'',r.mp_sku||r.sku||'',r.mp_descripcion||gDesc(r.mp_sku||r.sku||'')||'',c.pMP,Math.round(c.costoMP),c.cPan,Math.round(c.costoPan)];});
+  const ws=XLSX.utils.aoa_to_sheet([H].concat(rows));ws['!cols']=H.map(function(h){return {wch:Math.max(10,h.length+2)};});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Resumen Purga');
+  XLSX.writeFile(wb,'Resumen_Purga'+(RES_VIEW.length<allResumen.length?'_filtrado':'')+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  if(typeof logAudit==='function')logAudit('EXPORT','Exportó Resumen a Excel ('+RES_VIEW.length+' filas)');
+}
+(function(){
+  const tb=document.querySelector('#mod-resumen .toolbar'),th=document.querySelector('#res-tbl thead');if(!tb||!th)return;
+  const vd=tb.querySelector('.vd');
+  [['Desde','<input type="date" id="rs-d1" onchange="applyResFilters()"/>'],['Hasta','<input type="date" id="rs-d2" onchange="applyResFilters()"/>'],['Buscar','<input type="text" id="rs-q" placeholder="cuenta, OF, SKU..." style="min-width:150px" oninput="resDeb()"/>']].forEach(function(x){
+    const d=document.createElement('div');d.className='cg';d.innerHTML='<label>'+x[0]+'</label>'+x[1];tb.insertBefore(d,vd);});
+  const cl=document.createElement('button');cl.className='btn btn-sm btn-d';cl.id='rs-clear';cl.textContent='✕ Limpiar filtros';cl.style.display='none';cl.onclick=clearResFilters;tb.appendChild(cl);
+  const ct=document.createElement('span');ct.id='rs-count';ct.style.cssText='font-size:12px;color:var(--muted)';tb.appendChild(ct);
+  const tr=document.createElement('tr');tr.className='flt-row';
+  RF.forEach(function(c){
+    const t=document.createElement('th');t.style.cssText='background:#F3F4F6;padding:3px 3px;border-bottom:1px solid #D1D5DB;font-weight:400';
+    let el;
+    if(c[1]==='sel'){el=document.createElement('select');el.innerHTML='<option value="">Todos</option>';el.onchange=applyResFilters;}
+    else{el=document.createElement('input');el.type='text';el.placeholder=c[1]==='num'?'>5 · 2-8':'filtrar';el.oninput=resDeb;
+      if(c[1]==='num')el.title='Ejemplos: >5   <=10   5-10   =3   *(con valor)   -(vacío)';}
+    el.id='rf-'+c[0];el.style.cssText=RF_STYLE;t.appendChild(el);tr.appendChild(t);
+  });
+  const last=document.createElement('th');last.style.cssText='background:#F3F4F6;padding:3px;border-bottom:1px solid #D1D5DB';
+  last.innerHTML='<button class="btn btn-sm" style="font-size:10px;padding:2px 6px" onclick="clearResFilters()" title="Limpiar filtros">✕</button>';tr.appendChild(last);
+  th.appendChild(tr);
 })();
 </script>
 
