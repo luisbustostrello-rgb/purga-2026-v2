@@ -373,6 +373,27 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
         <div class="dash-box"><div class="dash-box-title">🏢 Purga por Cuenta</div><div id="d-cta"></div></div>
         <div class="dash-box"><div class="dash-box-title">⚠ Paneles Malos por Material</div><div id="d-pan-mat"></div></div>
       </div>
+
+      <div class="dash-box" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+          <div class="dash-box-title" style="margin:0">📉 Pareto de paneles malos</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap">
+            <label>Agrupar por</label>
+            <select id="pr-dim" onchange="drawPareto()" style="padding:4px 8px"><option value="material">Material (SKU)</option><option value="altura">Altura</option><option value="slot">Slot</option><option value="medida">Medida</option><option value="descri">Descri</option><option value="maquina">Máquina</option><option value="cuenta">Cuenta</option><option value="mes">Mes</option></select>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="pr-cost" onchange="drawPareto()"/> ver en $</label>
+          </div>
+        </div>
+        <div id="d-pareto"></div>
+        <div id="d-pareto-note" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-box"><div class="dash-box-title">📏 Paneles malos por Altura</div><div id="d-pan-alt"></div></div>
+        <div class="dash-box"><div class="dash-box-title">🔲 Paneles malos por Slot</div><div id="d-pan-slot"></div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-box"><div class="dash-box-title">📐 Paneles malos por Medida</div><div id="d-pan-med"></div></div>
+        <div class="dash-box"><div class="dash-box-title">📅 Paneles malos por Mes (unidades)</div><div id="d-pan-mes"></div></div>
+      </div>
     </div>
 
     <!-- INGRESO -->
@@ -1132,6 +1153,7 @@ async function loadDash(){
   document.getElementById('d-pan-mat').innerHTML=panRows.length?panRows.map(([sku,v])=>
     '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.pm/maxPM*100)+'%;background:#EF4444"><span>'+fmtN(v.pm)+' un</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+fmtFull(v.c)+'</div></div>').join('')
     :'<div class="empty">Sin paneles malos</div>';
+  PAN_ROWS=rows; drawPanelCharts();
 }
 
 // ════════════════════════════════════════════════════════
@@ -2974,6 +2996,7 @@ function exportDataCSV(){
  body.nav-open #nav-ov{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99}
  .main{margin-left:0;padding:58px 14px 20px}
  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+ .dash-grid{grid-template-columns:1fr}
  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
  #bg-canvas{left:0!important;width:100%!important}
 }
@@ -3731,6 +3754,80 @@ function imprimirPlanilla(){
   w.document.write(html);w.document.close();
   if(typeof logAudit==='function')logAudit('EXPORT','Imprimió planilla en blanco de toma de muestras');
 }
+</script>
+
+<script>
+// ── ANÁLISIS DE PANELES DEFECTUOSOS: Pareto, altura, slot, medida, mes ──
+let PAN_ROWS=[];
+function prMoney(v){return String(Math.round(Math.abs(parseFloat(v)||0))).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+const prV=function(v){return (v==null||String(v).trim()==='')?'Sin dato':String(v).trim();};
+const PR_DIMS={material:['Material (SKU)',function(r){return r.mp_sku||r.sku||'Sin dato';}],altura:['Altura',function(r){return prV(r.altura);}],slot:['Slot',function(r){return prV(r.slot);}],medida:['Medida',function(r){return prV(r.medida);}],descri:['Descri',function(r){return prV(r.descri);}],maquina:['Máquina',function(r){return prV(r.maquina);}],cuenta:['Cuenta',function(r){return prV(r.cuenta);}],mes:['Mes',function(r){return MSL[parseInt(r.mes)]||'Sin dato';}]};
+function prAgg(keyFn,useCost){
+  const m={};
+  PAN_ROWS.forEach(function(r){const u=+r.paneles_malos||0;if(u<=0)return;const k=keyFn(r),o=m[k]||(m[k]={k:k,u:0,c:0});o.u+=u;o.c+=calcCostos(r).costoPan;});
+  return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return useCost?b.c-a.c:b.u-a.u;});
+}
+function prHbars(id,keyFn){
+  const el=document.getElementById(id);if(!el)return;
+  const a=prAgg(keyFn,false),tot=a.reduce(function(s,x){return s+x.u;},0);
+  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
+  const top=a.slice(0,10),mx=top[0].u;
+  el.innerHTML=top.map(function(x){return '<div class="hbar-row"><div class="hbar-lbl" title="'+escH(x.k)+'">'+escH(String(x.k).substring(0,18))+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.max(2,Math.round(x.u/mx*100))+'%;background:#EF4444"><span>'+fmtN(x.u)+' un · '+Math.round(x.u/tot*100)+'%</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+prMoney(x.c)+'</div></div>';}).join('')+(a.length>10?'<div style="font-size:11px;color:var(--muted);margin-top:6px">+ '+(a.length-10)+' grupos más</div>':'');
+}
+function prFmt(v,cost){if(cost)return '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'k':Math.round(v));return fmtN(Math.round(v));}
+function drawPareto(){
+  const el=document.getElementById('d-pareto');if(!el)return;
+  const dim=PR_DIMS[document.getElementById('pr-dim').value]||PR_DIMS.material,cost=document.getElementById('pr-cost').checked;
+  const note=document.getElementById('d-pareto-note');
+  let a=prAgg(dim[1],cost);
+  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos con los filtros actuales</div>';note.textContent='';return;}
+  const val=function(x){return cost?x.c:x.u;};
+  if(a.length>12){const rest=a.slice(11);a=a.slice(0,11).concat([{k:'Otros ('+rest.length+')',u:rest.reduce(function(s,x){return s+x.u;},0),c:rest.reduce(function(s,x){return s+x.c;},0)}]);}
+  const tot=a.reduce(function(s,x){return s+val(x);},0);
+  let cum=0,k80=-1;a.forEach(function(x,i){cum+=val(x);x.cum=cum/tot*100;if(k80<0&&x.cum>=80)k80=i;});
+  const n=a.length,W=Math.max(el.clientWidth,320),l=46,r=42,t=26,band=(W-l-r)/n,b=band<84?74:36,H=b+215,bw=band*.62,mx=Math.max.apply(null,a.map(val))*1.12;
+  const Y=function(v){return H-b-v/mx*(H-b-t);},PY=function(p){return H-b-p/100*(H-b-t);};
+  let g='';
+  [0,25,50,75,100].forEach(function(p){g+='<line x1="'+l+'" y1="'+PY(p).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(p).toFixed(1)+'" stroke="#E5E7EB" stroke-width="1"/><text x="'+(W-r+6)+'" y="'+(PY(p)+3).toFixed(1)+'" font-size="9" fill="#B45309">'+p+'%</text>';});
+  [0,.5,1].forEach(function(f){const v=mx/1.12*f;g+='<text x="'+(l-6)+'" y="'+(Y(v)+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#9CA3AF">'+prFmt(v,cost)+'</text>';});
+  g+='<line x1="'+l+'" y1="'+PY(80).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(80).toFixed(1)+'" stroke="#DC2626" stroke-width="1" stroke-dasharray="4 4"/>';
+  let bars='',lab='',pts=[];
+  a.forEach(function(x,i){
+    const cx=l+band*i+band/2,y=Y(val(x)),v=prFmt(val(x),cost);
+    bars+='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-y).toFixed(1)+'" rx="2" fill="'+(i<=k80?'#DC2626':'#FCA5A5')+'"><title>'+escH(x.k)+': '+fmtN(x.u)+' un · $'+prMoney(x.c)+' · acumulado '+Math.round(x.cum)+'%</title></rect>';
+    if(band>30)bars+='<text x="'+cx.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="500">'+v+'</text>';
+    const tx=String(x.k).length>13?String(x.k).substring(0,12)+'…':String(x.k);
+    lab+=band<84?'<text transform="translate('+cx.toFixed(1)+','+(H-b+12)+') rotate(-40)" text-anchor="end" font-size="10" fill="#4B5563">'+escH(tx)+'</text>':'<text x="'+cx.toFixed(1)+'" y="'+(H-b+15)+'" text-anchor="middle" font-size="10" fill="#4B5563">'+escH(tx)+'</text>';
+    pts.push([cx,PY(x.cum),x.cum]);
+  });
+  const line=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
+  let dots='';pts.forEach(function(p){dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="#B45309" stroke="#fff" stroke-width="1.5"/>'+(band>46?'<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-8).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#B45309" font-weight="600" stroke="#fff" stroke-width="3" paint-order="stroke">'+Math.round(p[2])+'%</text>':'');});
+  el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+g+bars+'<path d="'+line+'" fill="none" stroke="#B45309" stroke-width="2" stroke-linejoin="round"/>'+dots+lab+'</svg>';
+  const vit=a.slice(0,k80+1).map(function(x){return x.k;});
+  note.innerHTML='<b style="color:#B91C1C">El 80% '+(cost?'del costo':'de los paneles malos')+'</b> se concentra en <b>'+vit.length+' de '+a.length+'</b> grupos de '+escH(dim[0])+': '+escH(vit.slice(0,5).join(', '))+(vit.length>5?'…':'')+'. Las barras rojas son las prioritarias para corregir.';
+}
+function drawPanMes(){
+  const el=document.getElementById('d-pan-mes');if(!el)return;
+  const v=Array(12).fill(0);PAN_ROWS.forEach(function(r){const m=(parseInt(r.mes)||1)-1;v[m]+=(+r.paneles_malos||0);});
+  if(!v.some(function(x){return x>0;})){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
+  const W=Math.max(el.clientWidth,300),H=170,l=34,r=10,t=20,b=22,band=(W-l-r)/12,bw=band*.62,mx=Math.max.apply(null,v)*1.12;
+  const Y=function(x){return H-b-x/mx*(H-b-t);};
+  let s2='';
+  [0,.5,1].forEach(function(f){const x=mx/1.12*f;s2+='<line x1="'+l+'" y1="'+Y(x).toFixed(1)+'" x2="'+(W-r)+'" y2="'+Y(x).toFixed(1)+'" stroke="#E5E7EB"/><text x="'+(l-5)+'" y="'+(Y(x)+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#9CA3AF">'+Math.round(x)+'</text>';});
+  v.forEach(function(x,i){const cx=l+band*i+band/2;s2+=(x>0?'<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+Y(x).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-Y(x)).toFixed(1)+'" rx="2" fill="#EF4444"><title>'+MSL[i+1]+': '+fmtN(x)+' un</title></rect><text x="'+cx.toFixed(1)+'" y="'+(Y(x)-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151">'+fmtN(x)+'</text>':'')+'<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="#6B7280">'+MSL[i+1]+'</text>';});
+  el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+s2+'</svg>';
+}
+function drawPanelCharts(){
+  prHbars('d-pan-alt',PR_DIMS.altura[1]);prHbars('d-pan-slot',PR_DIMS.slot[1]);prHbars('d-pan-med',PR_DIMS.medida[1]);
+  drawPareto();drawPanMes();
+}
+(function(){
+  if(!window.ResizeObserver)return;
+  [['d-pareto',function(){drawPareto();}],['d-pan-mes',function(){drawPanMes();}]].forEach(function(p){
+    const el=document.getElementById(p[0]);if(!el)return;let w=0;
+    new ResizeObserver(function(){if(Math.abs(el.clientWidth-w)>2){w=el.clientWidth;if(PAN_ROWS.length)p[1]();}}).observe(el);
+  });
+})();
 </script>
 
 <script>
