@@ -379,12 +379,15 @@ table.ing-tbl thead th{background:var(--sidebar);padding:8px 6px;font-size:10.5p
           <div class="dash-box-title" style="margin:0">📉 Pareto de paneles malos</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap">
             <label>Agrupar por</label>
-            <select id="pr-dim" onchange="drawPareto()" style="padding:4px 8px"><option value="material">Material (SKU)</option><option value="altura">Altura</option><option value="slot">Slot</option><option value="medida">Medida</option><option value="descri">Descri</option><option value="maquina">Máquina</option><option value="cuenta">Cuenta</option><option value="mes">Mes</option></select>
-            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="pr-cost" onchange="drawPareto()"/> ver en $</label>
+            <select id="pr-dim" onchange="drawPanelCharts()" style="padding:4px 8px"><option value="material">Material (SKU)</option><option value="altura">Altura</option><option value="slot">Slot</option><option value="medida">Medida</option><option value="descri">Descri</option><option value="maquina">Máquina</option><option value="cuenta">Cuenta</option><option value="mes">Mes</option></select>
+            <label>Desglosar por</label><select id="pr-split" onchange="drawPanelCharts()" style="padding:4px 8px"><option value="cuenta">Cuenta</option><option value="maquina">Máquina</option><option value="">Sin desglose</option></select>
+            <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" id="pr-cost" onchange="drawPanelCharts()"/> ver en $</label>
           </div>
         </div>
+        <div id="d-pareto-leg"></div>
         <div id="d-pareto"></div>
         <div id="d-pareto-note" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+        <div id="d-pareto-det" style="margin-top:10px;overflow-x:auto"></div>
       </div>
       <div class="dash-grid">
         <div class="dash-box"><div class="dash-box-title">📏 Paneles malos por Altura</div><div id="d-pan-alt"></div></div>
@@ -1061,7 +1064,11 @@ async function loadDash(){
   if(fSku) q = q.eq('mp_sku', fSku);
 
   const {data}=await q;
-  const rows=data||[];
+  DASH_BASE=data||[];
+  dashRender();
+}
+let DASH_BASE=[];
+function aggRows(rows){
   let sumKg=0,sumMP=0,sumPan=0,sumPM=0;
   const kgM=Array(12).fill(0),cM=Array(12).fill(0);
   const byMat={},byMaq={},byCta={},byPan={};
@@ -1085,6 +1092,12 @@ async function loadDash(){
     if(!byPan[sku]) byPan[sku]={pm:0,c:0};
     byPan[sku].pm+=pm; byPan[sku].c+=cp;
   });
+  return {rows,sumKg,sumMP,sumPan,sumPM,kgM,cM,byMat,byMaq,byCta,byPan};
+}
+function dashRender(){
+  const A=aggRows(dslFilter(DASH_BASE)),aMat=aggRows(dslFilter(DASH_BASE,'sku')),aMaq=aggRows(dslFilter(DASH_BASE,'maquina')),aCta=aggRows(dslFilter(DASH_BASE,'cuenta')),aMes=aggRows(dslFilter(DASH_BASE,'mes'));
+  const rows=A.rows,sumKg=A.sumKg,sumMP=A.sumMP,sumPan=A.sumPan,sumPM=A.sumPM;
+  const kgM=aMes.kgM,cM=aMes.cM,byMat=aMat.byMat,byMaq=aMaq.byMaq,byCta=aCta.byCta,byPan=aMat.byPan;
 
   // KPIs — números completos con separador de miles
   function fmtFull(v){
@@ -1120,15 +1133,15 @@ async function loadDash(){
   DASH_KG=kgM.slice(); drawKgLine();
   const maxC=Math.max(...cM,1);
   document.getElementById('d-bar-c').innerHTML=cM.map((v,i)=>
-    '<div class="bc"><div class="bv">'+( v>0?'$'+fmtM0(v/1000)+'k':'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxC*120),v>0?4:0)+'px;background:'+CC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
+    '<div class="bc" data-dim="mes" data-val="'+(i+1)+'" style="cursor:pointer"><div class="bv">'+( v>0?'$'+fmtM0(v/1000)+'k':'' )+'</div><div class="br" style="height:'+Math.max(Math.round(v/maxC*120),v>0?4:0)+'px;background:'+CC[i]+'"></div><div class="bl">'+MSL[i+1]+'</div></div>').join('');
   const matRows=Object.entries(byMat).sort((a,b)=>b[1].kg-a[1].kg);
   const maxMKg=matRows.length?matRows[0][1].kg:1;
   document.getElementById('d-mat').innerHTML=matRows.map(([sku,v],i)=>
-    '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMKg*100)+'%;background:'+PAL[i%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
+    '<div class="hbar-row" data-dim="sku" data-val="'+escH(sku)+'" title="Clic para filtrar todo el Dashboard"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMKg*100)+'%;background:'+PAL[i%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
   const maqRows=Object.entries(byMaq).sort((a,b)=>b[1].kg-a[1].kg);
   const maxMqKg=maqRows.length?maqRows[0][1].kg:1;
   document.getElementById('d-maq').innerHTML=maqRows.map(([m,v],i)=>
-    '<div class="hbar-row"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
+    '<div class="hbar-row" data-dim="maquina" data-val="'+escH(m)+'" title="Clic para filtrar todo el Dashboard"><div class="hbar-lbl">'+m+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.kg/maxMqKg*100)+'%;background:'+PAL[(i+4)%PAL.length]+'"><span>'+fmtN(v.kg)+' kg</span></div></div><div class="hbar-val">$'+fmtFull(v.c)+'</div></div>').join('');
   const ctaRows=Object.entries(byCta).sort((a,b)=>b[1].kg-a[1].kg);
   const PIE=['#2563EB','#DC2626','#D97706','#7C3AED','#059669','#0891B2'];
   const totalCtaKg2=ctaRows.reduce((s,[,v])=>s+v.kg,0);
@@ -1141,19 +1154,19 @@ async function loadDash(){
     const ix1=100+r2*Math.cos(startA+angle),iy1=100+r2*Math.sin(startA+angle);
     const ix2=100+r2*Math.cos(startA),iy2=100+r2*Math.sin(startA);
     const large=angle>Math.PI?1:0;
-    slices+='<path d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r1+','+r1+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' L'+ix1.toFixed(1)+','+iy1.toFixed(1)+' A'+r2+','+r2+' 0 '+large+',0 '+ix2.toFixed(1)+','+iy2.toFixed(1)+' Z" fill="'+PIE[i%PIE.length]+'" stroke="#fff" stroke-width="2"/>';
+    slices+='<path data-dim="cuenta" data-val="'+escH(c)+'" style="cursor:pointer" d="M'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r1+','+r1+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' L'+ix1.toFixed(1)+','+iy1.toFixed(1)+' A'+r2+','+r2+' 0 '+large+',0 '+ix2.toFixed(1)+','+iy2.toFixed(1)+' Z" fill="'+PIE[i%PIE.length]+'" stroke="#fff" stroke-width="2"/>';
     const midA=startA+angle/2,lx=100+(r1+r2)/2*Math.cos(midA),ly=100+(r1+r2)/2*Math.sin(midA);
     if(pct>0.05) slices+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="600" fill="#fff">'+(pct*100).toFixed(0)+'%</text>';
     startA+=angle;
   });
-  const legend=ctaRows.map(([c,v],i)=>'<div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:'+PIE[i%PIE.length]+';flex-shrink:0"></div><div style="flex:1;font-weight:500">'+c+'</div><div style="color:var(--muted)">'+fmtN(v.kg)+' kg</div><div style="color:var(--blue);font-weight:500;min-width:90px;text-align:right">$'+fmtFull(v.c)+'</div></div>').join('');
+  const legend=ctaRows.map(([c,v],i)=>'<div data-dim="cuenta" data-val="'+escH(c)+'" style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:12px"><div style="width:12px;height:12px;border-radius:50%;background:'+PIE[i%PIE.length]+';flex-shrink:0"></div><div style="flex:1;font-weight:500">'+c+'</div><div style="color:var(--muted)">'+fmtN(v.kg)+' kg</div><div style="color:var(--blue);font-weight:500;min-width:90px;text-align:right">$'+fmtFull(v.c)+'</div></div>').join('');
   document.getElementById('d-cta').innerHTML='<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><svg width="200" height="200" viewBox="0 0 200 200">'+slices+'</svg><div style="flex:1;min-width:160px">'+legend+'</div></div>';
   const panRows=Object.entries(byPan).filter(([,v])=>v.pm>0).sort((a,b)=>b[1].pm-a[1].pm);
   const maxPM=panRows.length?panRows[0][1].pm:1;
   document.getElementById('d-pan-mat').innerHTML=panRows.length?panRows.map(([sku,v])=>
     '<div class="hbar-row"><div class="hbar-lbl" title="'+gDesc(sku)+'">'+gDesc(sku).substring(0,18)+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(v.pm/maxPM*100)+'%;background:#EF4444"><span>'+fmtN(v.pm)+' un</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+fmtFull(v.c)+'</div></div>').join('')
     :'<div class="empty">Sin paneles malos</div>';
-  PAN_ROWS=rows; drawPanelCharts();
+  PAN_ROWS=DASH_BASE; drawPanelCharts(); dslChips(); dslHighlight();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1602,18 +1615,18 @@ async function importarExcel(input){
     const mes=parseInt(document.getElementById('ing-mes').value);
     const recs=dataRows.map(r=>{
       const sku=String(r[16]||'').trim();
-      const kg=parseFloat(r[3])||0;
+      const kg=pnum(r[3])||0;
       const fechaStr=parseFecha(r[2]);
       let mesR=mes,anio=2026;
       if(fechaStr&&fechaStr.includes('-')){const p=fechaStr.split('-');anio=parseInt(p[0])||2026;mesR=parseInt(p[1])||mes;}
       return {cuenta:String(r[0]||'').trim().toUpperCase(),maquina:String(r[1]||'').trim().toUpperCase(),fecha_registro:fechaStr,
         mes:mesR,anio,kg,costo_usd:parseFloat((kg*gPrecio(sku)).toFixed(4)),
-        purga_color:parseFloat(r[4])||0,paneles_sin_frame:parseFloat(r[5])||0,
-        kg_paneles_sin_frame:parseFloat(r[6])||0,paneles_malos:parseFloat(r[7])||0,
-        kg_panel:parseFloat(r[8])||0,medida:String(r[9]||'').trim(),
-        altura:parseFloat(r[10])||null,slot:String(r[11]||'').trim(),
+        purga_color:pnum(r[4])||0,paneles_sin_frame:pnum(r[5])||0,
+        kg_paneles_sin_frame:pnum(r[6])||0,paneles_malos:pnum(r[7])||0,
+        kg_panel:pnum(r[8])||0,medida:String(r[9]||'').trim(),
+        altura:pnum(r[10])||null,slot:String(r[11]||'').trim(),
         descri:String(r[12]||'').trim(),of_numero:String(r[13]||'').trim(),
-        marcos:parseInt(r[14])||0,peso_real:parseFloat(r[15])||0,
+        marcos:Math.round(pnum(r[14])),peso_real:pnum(r[15])||0,
         mp_sku:sku||null,mp_descripcion:sku?gDesc(sku):null,tipo_panel:'PURGA'};
     }).filter(r=>r.cuenta&&r.maquina&&(r.kg>0||r.paneles_sin_frame>0||r.paneles_malos>0||r.purga_color>0||r.kg_paneles_sin_frame>0));
     if(!recs.length){showAlert('ing','No hay filas válidas en el archivo','err');return;}
@@ -2996,6 +3009,16 @@ function exportDataCSV(){
 #q-badge{margin:4px 12px;padding:4px 8px;border-radius:6px;background:#B45309;color:#fff;font-size:11px;text-align:center}
 .toast-q{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:9000;max-width:90vw;box-shadow:0 6px 24px rgba(0,0,0,.35)}
 #off-banner{display:none;position:fixed;top:0;left:0;right:0;background:#B45309;color:#fff;text-align:center;font-size:12px;padding:5px;z-index:9500}
+[data-dim]{cursor:pointer;transition:opacity .15s}
+.stk{display:flex;height:20px;border-radius:4px;overflow:hidden;min-width:4px;flex-shrink:0}
+.stk>i{display:block;font-style:normal;font-size:10px;color:#fff;text-align:center;line-height:20px;overflow:hidden;white-space:nowrap;font-weight:600}
+.stk-lbl{margin-left:7px;font-size:11px;color:#374151;white-space:nowrap}
+.pr-leg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--muted);margin-bottom:8px}.pr-leg b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+#d-sel{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;font-size:12px;color:var(--muted)}
+.sel-chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border-radius:999px;padding:3px 6px 3px 11px;font-size:11px;font-weight:500;cursor:pointer}
+.sel-chip u{text-decoration:none;opacity:.8;font-size:13px;line-height:1}
+.pr-det{width:100%;border-collapse:collapse;font-size:12px}.pr-det th{background:#F3F4F6;color:#4B5563;font-weight:600;text-align:left;padding:6px 8px;font-size:11px}.pr-det td{padding:6px 8px;border-bottom:1px solid #F3F4F6;vertical-align:middle}.pr-det tr[data-dim]:hover td{background:#F9FAFB}
+.pr-mini{display:flex;height:10px;border-radius:3px;overflow:hidden;min-width:90px;width:110px}.pr-mini i{display:block}
 #last-ing{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:500}
 @media(max-width:900px){
  #nav-toggle{display:block}
@@ -3526,7 +3549,7 @@ function drawKgLine(){
   if(pts.length){
     line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
     area=line+' L'+pts[pts.length-1][0].toFixed(1)+','+Y(0).toFixed(1)+' L'+pts[0][0].toFixed(1)+','+Y(0).toFixed(1)+' Z';
-    pts.forEach(p=>{dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" style="fill:var(--accent2,#15803D)" stroke="#fff" stroke-width="1.5"><title>'+MSL[p[3]+1]+': '+fmtN(p[2])+' kg</title></circle>'+(p[2]>0?'<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-8).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="500">'+fmtN(p[2])+'</text>':'');});
+    pts.forEach(p=>{dots+='<circle data-dim="mes" data-val="'+(p[3]+1)+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4.5" style="cursor:pointer;fill:var(--accent2,#15803D)" stroke="#fff" stroke-width="1.5"><title>'+MSL[p[3]+1]+': '+fmtN(p[2])+' kg</title></circle>'+(p[2]>0?'<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-8).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="500">'+fmtN(p[2])+'</text>':'');});
   }
   let lab='';for(let i=0;i<12;i++)lab+='<text x="'+X(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="#6B7280">'+MSL[i+1]+'</text>';
   el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible"><defs><linearGradient id="kgGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" style="stop-color:var(--accent2,#15803D);stop-opacity:.28"/><stop offset="100%" style="stop-color:var(--accent2,#15803D);stop-opacity:.02"/></linearGradient></defs>'+g+(area?'<path d="'+area+'" fill="url(#kgGrad)"/><path d="'+line+'" fill="none" style="stroke:var(--accent2,#15803D)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>':'')+dots+lab+'</svg>';
@@ -3543,6 +3566,33 @@ function drawKgLine(){
 
 <script>
 // ── CAPA DE DATOS (paginación automática + cola sin conexión), 2 PASOS Y EXTRAS ──
+// Normalización: 305X305 = 305x305 = 305×305 · 12,5 = 12.5 · cuentas y máquinas en mayúsculas
+function pnum(v){
+  if(typeof v==='number')return isFinite(v)?v:0;
+  let t=String(v==null?'':v).replace(/\s+/g,'').replace(/[^\d.,\-]/g,'');
+  if(!t)return 0;
+  const c=(t.match(/,/g)||[]).length,d=(t.match(/\./g)||[]).length;
+  if(c&&d){t=t.lastIndexOf(',')>t.lastIndexOf('.')?t.replace(/\./g,'').replace(',','.'):t.replace(/,/g,'');}
+  else if(c){t=c>1?t.replace(/,/g,''):t.replace(',','.');}
+  else if(d>1){t=t.replace(/\./g,'');}
+  return parseFloat(t)||0;
+}
+function normDim(v){
+  if(v==null)return v;
+  const t=String(v).trim();if(!t)return '';
+  return t.replace(/(\d),(\d)/g,'$1.$2').replace(/(\d)\s*[×xX*]\s*(?=\d)/g,'$1x');
+}
+function dlNormRec(r){
+  if(!r||typeof r!=='object')return r;
+  if('medida' in r)r.medida=normDim(r.medida);
+  if('slot' in r)r.slot=normDim(r.slot);
+  if(typeof r.altura==='string'&&/^\s*[\d.,]+\s*$/.test(r.altura))r.altura=pnum(r.altura);
+  if(typeof r.cuenta==='string')r.cuenta=r.cuenta.trim().toUpperCase();
+  if(typeof r.maquina==='string')r.maquina=r.maquina.trim().toUpperCase();
+  if(typeof r.mp_sku==='string')r.mp_sku=r.mp_sku.trim();
+  return r;
+}
+function dlNormPayload(p){[].concat(p||[]).forEach(dlNormRec);}
 const DL_PK={purgas:'id',maestro_sku:'sku',profiles:'user_id',audit_log:'id'};
 const DL_Q='purga_cola_2026';
 let DL_FL=false,DL_BK=false;
@@ -3573,10 +3623,12 @@ function wrapClient(c){
         if(r.count!=null)total=r.count;
         if(!d.length||(total!=null?out.length>=total:d.length<1000))break;
       }
+      if(t==='purgas')out.forEach(dlNormRec);
       return {data:out,error:null,count:out.length,status:200,statusText:'OK'};
     }
     // 2) INSERT de purgas sin internet: se guarda en la tablet y se envía después
     if(n[0]==='insert'&&t==='purgas'){
+      dlNormPayload(log[0][1][0]);
       let r;
       if(!navigator.onLine)r={error:{message:'Failed to fetch'}};
       else{try{r=await build(t,log);}catch(e){r={error:{message:String(e&&e.message||e)}};}}
@@ -3588,7 +3640,10 @@ function wrapClient(c){
       }
       return r;
     }
-    return build(t,log);
+    if(t==='purgas'&&(n[0]==='update'||n[0]==='upsert'))dlNormPayload(log[0][1][0]);
+    const rr=await build(t,log);
+    if(t==='purgas'&&n[0]==='select'&&rr&&rr.data)[].concat(rr.data).forEach(dlNormRec);
+    return rr;
   };
   const mk=function(t,log){return new Proxy({},{get:function(_,name){
     if(name==='then')return function(a,b){return run(t,log).then(a,b);};
@@ -3762,73 +3817,165 @@ function imprimirPlanilla(){
 </script>
 
 <script>
-// ── ANÁLISIS DE PANELES DEFECTUOSOS: Pareto, altura, slot, medida, mes ──
-let PAN_ROWS=[];
-function prMoney(v){return String(Math.round(Math.abs(parseFloat(v)||0))).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+// ── DASHBOARD INTERACTIVO: selección cruzada, paneles defectuosos desglosados ──
+let PAN_ROWS=[],DSEL={};
 const prV=function(v){return (v==null||String(v).trim()==='')?'Sin dato':String(v).trim();};
-const PR_DIMS={material:['Material (SKU)',function(r){return r.mp_sku||r.sku||'Sin dato';}],altura:['Altura',function(r){return prV(r.altura);}],slot:['Slot',function(r){return prV(r.slot);}],medida:['Medida',function(r){return prV(r.medida);}],descri:['Descri',function(r){return prV(r.descri);}],maquina:['Máquina',function(r){return prV(r.maquina);}],cuenta:['Cuenta',function(r){return prV(r.cuenta);}],mes:['Mes',function(r){return MSL[parseInt(r.mes)]||'Sin dato';}]};
-function prAgg(keyFn,useCost){
-  const m={};
-  PAN_ROWS.forEach(function(r){const u=+r.paneles_malos||0;if(u<=0)return;const k=keyFn(r),o=m[k]||(m[k]={k:k,u:0,c:0});o.u+=u;o.c+=calcCostos(r).costoPan;});
-  return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return useCost?b.c-a.c:b.u-a.u;});
+const DSL_GET={mes:function(r){return String(parseInt(r.mes)||'');},cuenta:function(r){return r.cuenta||'—';},maquina:function(r){return r.maquina||'—';},sku:function(r){return String(r.mp_sku||r.sku||'19990');},medida:function(r){return prV(r.medida);},altura:function(r){return prV(r.altura);},slot:function(r){return prV(r.slot);},descri:function(r){return prV(r.descri);}};
+const DSL_NAME={mes:'Mes',cuenta:'Cuenta',maquina:'Máquina',sku:'Material',medida:'Medida',altura:'Altura',slot:'Slot',descri:'Descri'};
+const DSL_LBL=function(d,v){return d==='mes'?(MSL[v]||v):d==='sku'?gDesc(v).substring(0,22):v;};
+function dslFilter(rows,skip){
+  const ks=Object.keys(DSEL).filter(function(k){return k!==skip&&DSEL[k].length;});
+  if(!ks.length)return rows;
+  return rows.filter(function(r){return ks.every(function(k){return DSEL[k].indexOf(DSL_GET[k](r))>=0;});});
 }
-function prHbars(id,keyFn){
-  const el=document.getElementById(id);if(!el)return;
-  const a=prAgg(keyFn,false),tot=a.reduce(function(s,x){return s+x.u;},0);
-  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
-  const top=a.slice(0,10),mx=top[0].u;
-  el.innerHTML=top.map(function(x){return '<div class="hbar-row"><div class="hbar-lbl" title="'+escH(x.k)+'">'+escH(String(x.k).substring(0,18))+'</div><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.max(2,Math.round(x.u/mx*100))+'%;background:#EF4444"><span>'+fmtN(x.u)+' un · '+Math.round(x.u/tot*100)+'%</span></div></div><div class="hbar-val" style="color:var(--gold)">$'+prMoney(x.c)+'</div></div>';}).join('')+(a.length>10?'<div style="font-size:11px;color:var(--muted);margin-top:6px">+ '+(a.length-10)+' grupos más</div>':'');
+function dslToggle(d,v){
+  const a=DSEL[d]||(DSEL[d]=[]),i=a.indexOf(v);
+  if(i>=0)a.splice(i,1);else a.push(v);
+  if(!a.length)delete DSEL[d];
+  dashRender();
 }
+function dslClear(){DSEL={};dashRender();}
+function dslHighlight(){
+  document.querySelectorAll('#mod-dash [data-dim]').forEach(function(el){
+    const sel=DSEL[el.dataset.dim];
+    el.style.opacity=(sel&&sel.length&&sel.indexOf(el.dataset.val)<0)?'.35':'1';
+  });
+}
+function dslChips(){
+  let el=document.getElementById('d-sel');
+  if(!el){const tb=document.querySelector('#mod-dash .toolbar');if(!tb)return;el=document.createElement('div');el.id='d-sel';tb.parentNode.insertBefore(el,tb.nextSibling);}
+  const ks=Object.keys(DSEL);
+  if(!ks.length){el.innerHTML='<span>💡 Toca una barra, punto o porción de cualquier gráfico para filtrar todo el Dashboard. Toca de nuevo para quitarla.</span>';return;}
+  let h='<span style="font-weight:600;color:var(--text)">Selección:</span>';
+  ks.forEach(function(k){DSEL[k].forEach(function(v){h+='<span class="sel-chip" data-chip-dim="'+escH(k)+'" data-chip-val="'+escH(v)+'">'+DSL_NAME[k]+': '+escH(DSL_LBL(k,v))+' <u>✕</u></span>';});});
+  h+='<button class="btn btn-sm" onclick="dslClear()">Limpiar selección</button>';
+  el.innerHTML=h;
+}
+(function(){
+  const m=document.getElementById('mod-dash');if(!m)return;
+  m.addEventListener('click',function(e){
+    const c=e.target.closest('[data-chip-dim]');
+    if(c){dslToggle(c.dataset.chipDim,c.dataset.chipVal);return;}
+    const t=e.target.closest('[data-dim]');
+    if(t&&t.dataset.val!=='')dslToggle(t.dataset.dim,t.dataset.val);
+  });
+})();
+
+// ---- Colores sobrios y consistentes por cuenta
+const SPLIT_COL={'CMR':'#2563EB','IMPU':'#0F766E','IMR':'#D97706','HCPU':'#7C3AED','IMPU PIN':'#0891B2'};
+const SPLIT_FB=['#475569','#DB2777','#65A30D','#0E7490','#9333EA','#CA8A04','#BE123C','#334155'];
+function splitColor(k,keys){return SPLIT_COL[k]||SPLIT_FB[Math.max(0,keys.indexOf(k))%SPLIT_FB.length];}
+function prMoney(v){return String(Math.round(Math.abs(parseFloat(v)||0))).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function prFmt(v,cost){if(cost)return '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'k':Math.round(v));return fmtN(Math.round(v));}
+const PR_DIMS={material:['sku','Material (SKU)'],altura:['altura','Altura'],slot:['slot','Slot'],medida:['medida','Medida'],descri:['descri','Descri'],maquina:['maquina','Máquina'],cuenta:['cuenta','Cuenta'],mes:['mes','Mes']};
+function prSplit(){return document.getElementById('pr-split')?document.getElementById('pr-split').value:'';}
+// agrupa paneles malos por una dimensión, con desglose por otra
+function prAgg(dim,split,cost){
+  const rows=dslFilter(PAN_ROWS,dim),m={};
+  rows.forEach(function(r){
+    const u=+r.paneles_malos||0;if(u<=0)return;
+    const k=DSL_GET[dim](r),c=calcCostos(r).costoPan,o=m[k]||(m[k]={k:k,u:0,c:0,p:{}});
+    o.u+=u;o.c+=c;
+    if(split){const sk=DSL_GET[split](r),q=o.p[sk]||(o.p[sk]={u:0,c:0});q.u+=u;q.c+=c;}
+  });
+  const a=Object.keys(m).map(function(k){return m[k];});
+  a.sort(function(x,y){return dim==='mes'&&false?0:(cost?y.c-x.c:y.u-x.u);});
+  return a;
+}
+function prKeys(a,cost){const t={};a.forEach(function(x){Object.keys(x.p).forEach(function(k){t[k]=(t[k]||0)+(cost?x.p[k].c:x.p[k].u);});});return Object.keys(t).sort(function(x,y){return t[y]-t[x];});}
+function prLegend(keys){return keys.length?'<div class="pr-leg">'+keys.map(function(k){return '<span><b style="background:'+splitColor(k,keys)+'"></b>'+escH(k)+'</span>';}).join('')+'</div>':'';}
+function prSegs(x,keys,cost){
+  const tot=cost?x.c:x.u;
+  return keys.filter(function(k){return x.p[k];}).map(function(k){
+    const v=cost?x.p[k].c:x.p[k].u,sh=tot?Math.round(v/tot*100):0;
+    return '<i style="flex:'+v+';background:'+splitColor(k,keys)+'" title="'+escH(k)+': '+fmtN(x.p[k].u)+' un · $'+prMoney(x.p[k].c)+' ('+sh+'%)">'+(sh>=16?prFmt(v,cost):'')+'</i>';
+  }).join('');
+}
+function prHbars(id,dim){
+  const el=document.getElementById(id);if(!el)return;
+  const split=prSplit(),a=prAgg(dim,split,false);
+  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
+  const tot=a.reduce(function(s,x){return s+x.u;},0),top=a.slice(0,10),mx=top[0].u,keys=prKeys(a,false);
+  el.innerHTML=prLegend(keys)+top.map(function(x){
+    const lb=dim==='sku'?gDesc(x.k):(dim==='mes'?(MSL[x.k]||x.k):x.k);
+    return '<div class="hbar-row" data-dim="'+dim+'" data-val="'+escH(x.k)+'" title="Clic para filtrar todo el Dashboard"><div class="hbar-lbl" title="'+escH(lb)+'">'+escH(String(lb).substring(0,18))+'</div><div class="hbar-track" style="display:flex;align-items:center;overflow:visible"><div class="stk" style="width:'+Math.max(2,x.u/mx*80).toFixed(1)+'%;'+(split?'':'background:var(--accent)')+'">'+prSegs(x,keys,false)+'</div><span class="stk-lbl">'+fmtN(x.u)+' un · '+Math.round(x.u/tot*100)+'%</span></div><div class="hbar-val" style="color:var(--gold)">$'+prMoney(x.c)+'</div></div>';
+  }).join('')+(a.length>10?'<div style="font-size:11px;color:var(--muted);margin-top:6px">+ '+(a.length-10)+' grupos más</div>':'');
+}
 function drawPareto(){
   const el=document.getElementById('d-pareto');if(!el)return;
-  const dim=PR_DIMS[document.getElementById('pr-dim').value]||PR_DIMS.material,cost=document.getElementById('pr-cost').checked;
-  const note=document.getElementById('d-pareto-note');
-  let a=prAgg(dim[1],cost);
-  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos con los filtros actuales</div>';note.textContent='';return;}
-  const val=function(x){return cost?x.c:x.u;};
-  if(a.length>12){const rest=a.slice(11);a=a.slice(0,11).concat([{k:'Otros ('+rest.length+')',u:rest.reduce(function(s,x){return s+x.u;},0),c:rest.reduce(function(s,x){return s+x.c;},0)}]);}
+  const dk=document.getElementById('pr-dim').value,dim=(PR_DIMS[dk]||PR_DIMS.material)[0],dname=(PR_DIMS[dk]||PR_DIMS.material)[1];
+  const cost=document.getElementById('pr-cost').checked,split=prSplit(),note=document.getElementById('d-pareto-note'),det=document.getElementById('d-pareto-det'),leg=document.getElementById('d-pareto-leg');
+  let a=prAgg(dim,split,cost);
+  if(!a.length){el.innerHTML='<div class="empty">Sin paneles malos con la selección actual</div>';note.textContent='';det.innerHTML='';leg.innerHTML='';return;}
+  const val=function(x){return cost?x.c:x.u;},keys=prKeys(a,cost);
+  if(a.length>12){const rest=a.slice(11),o={k:'Otros ('+rest.length+')',u:0,c:0,p:{},otros:1};rest.forEach(function(x){o.u+=x.u;o.c+=x.c;Object.keys(x.p).forEach(function(k){const q=o.p[k]||(o.p[k]={u:0,c:0});q.u+=x.p[k].u;q.c+=x.p[k].c;});});a=a.slice(0,11).concat([o]);}
   const tot=a.reduce(function(s,x){return s+val(x);},0);
   let cum=0,k80=-1;a.forEach(function(x,i){cum+=val(x);x.cum=cum/tot*100;if(k80<0&&x.cum>=80)k80=i;});
   const n=a.length,W=Math.max(el.clientWidth,320),l=46,r=42,t=26,band=(W-l-r)/n,b=band<84?74:36,H=b+215,bw=band*.62,mx=Math.max.apply(null,a.map(val))*1.12;
   const Y=function(v){return H-b-v/mx*(H-b-t);},PY=function(p){return H-b-p/100*(H-b-t);};
   let g='';
-  [0,25,50,75,100].forEach(function(p){g+='<line x1="'+l+'" y1="'+PY(p).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(p).toFixed(1)+'" stroke="#E5E7EB" stroke-width="1"/><text x="'+(W-r+6)+'" y="'+(PY(p)+3).toFixed(1)+'" font-size="9" fill="#B45309">'+p+'%</text>';});
+  [0,25,50,75,100].forEach(function(p){g+='<line x1="'+l+'" y1="'+PY(p).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(p).toFixed(1)+'" stroke="#E5E7EB"/><text x="'+(W-r+6)+'" y="'+(PY(p)+3).toFixed(1)+'" font-size="9" fill="#6B7280">'+p+'%</text>';});
   [0,.5,1].forEach(function(f){const v=mx/1.12*f;g+='<text x="'+(l-6)+'" y="'+(Y(v)+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#9CA3AF">'+prFmt(v,cost)+'</text>';});
-  g+='<line x1="'+l+'" y1="'+PY(80).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(80).toFixed(1)+'" stroke="#DC2626" stroke-width="1" stroke-dasharray="4 4"/>';
+  g+='<line x1="'+l+'" y1="'+PY(80).toFixed(1)+'" x2="'+(W-r)+'" y2="'+PY(80).toFixed(1)+'" stroke="#64748B" stroke-dasharray="4 4"/><text x="'+(l+4)+'" y="'+(PY(80)-4).toFixed(1)+'" font-size="9" fill="#64748B">80%</text>';
   let bars='',lab='',pts=[];
   a.forEach(function(x,i){
-    const cx=l+band*i+band/2,y=Y(val(x)),v=prFmt(val(x),cost);
-    bars+='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-y).toFixed(1)+'" rx="2" fill="'+(i<=k80?'#DC2626':'#FCA5A5')+'"><title>'+escH(x.k)+': '+fmtN(x.u)+' un · $'+prMoney(x.c)+' · acumulado '+Math.round(x.cum)+'%</title></rect>';
-    if(band>30)bars+='<text x="'+cx.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="500">'+v+'</text>';
-    const tx=String(x.k).length>13?String(x.k).substring(0,12)+'…':String(x.k);
+    const cx=l+band*i+band/2,y=Y(val(x)),vital=i<=k80;let inner='';
+    if(split&&keys.length){let yy=H-b;keys.forEach(function(k){if(!x.p[k])return;const v=cost?x.p[k].c:x.p[k].u,h=v/mx*(H-b-t);yy-=h;inner+='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+splitColor(k,keys)+'" fill-opacity="'+(vital?1:.6)+'"><title>'+escH(x.k)+' · '+escH(k)+': '+fmtN(x.p[k].u)+' un · $'+prMoney(x.p[k].c)+' ('+Math.round(v/val(x)*100)+'% de este grupo)</title></rect>';});}
+    else inner='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-y).toFixed(1)+'" rx="2" style="fill:'+(vital?'var(--accent)':'#CBD5E1')+'"><title>'+escH(x.k)+': '+fmtN(x.u)+' un · $'+prMoney(x.c)+' · acumulado '+Math.round(x.cum)+'%</title></rect>';
+    const attrs=x.otros?'':' data-dim="'+dim+'" data-val="'+escH(x.k)+'"';
+    bars+='<g'+attrs+'>'+inner+(band>30?'<text x="'+cx.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="600">'+prFmt(val(x),cost)+'</text>':'')+'</g>';
+    const nm=dim==='mes'?(MSL[x.k]||x.k):dim==='sku'?x.k:x.k,tx=String(nm).length>13?String(nm).substring(0,12)+'…':String(nm);
     lab+=band<84?'<text transform="translate('+cx.toFixed(1)+','+(H-b+12)+') rotate(-40)" text-anchor="end" font-size="10" fill="#4B5563">'+escH(tx)+'</text>':'<text x="'+cx.toFixed(1)+'" y="'+(H-b+15)+'" text-anchor="middle" font-size="10" fill="#4B5563">'+escH(tx)+'</text>';
     pts.push([cx,PY(x.cum),x.cum]);
   });
   const line=pts.map(function(p,i){return (i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ');
-  let dots='';pts.forEach(function(p){dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="#B45309" stroke="#fff" stroke-width="1.5"/>'+(band>46?'<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-8).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#B45309" font-weight="600" stroke="#fff" stroke-width="3" paint-order="stroke">'+Math.round(p[2])+'%</text>':'');});
-  el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+g+bars+'<path d="'+line+'" fill="none" stroke="#B45309" stroke-width="2" stroke-linejoin="round"/>'+dots+lab+'</svg>';
-  const vit=a.slice(0,k80+1).map(function(x){return x.k;});
-  note.innerHTML='<b style="color:#B91C1C">El 80% '+(cost?'del costo':'de los paneles malos')+'</b> se concentra en <b>'+vit.length+' de '+a.length+'</b> grupos de '+escH(dim[0])+': '+escH(vit.slice(0,5).join(', '))+(vit.length>5?'…':'')+'. Las barras rojas son las prioritarias para corregir.';
+  let dots='';pts.forEach(function(p){dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" fill="#0F172A" stroke="#fff" stroke-width="1.5" pointer-events="none"/>'+(band>46?'<text x="'+p[0].toFixed(1)+'" y="'+(p[1]-8).toFixed(1)+'" text-anchor="middle" font-size="9" fill="#0F172A" font-weight="600" stroke="#fff" stroke-width="3" paint-order="stroke" pointer-events="none">'+Math.round(p[2])+'%</text>':'');});
+  leg.innerHTML=prLegend(keys)+'<div class="pr-leg"><span><b style="background:#0F172A;border-radius:50%"></b>% acumulado</span></div>';
+  el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+g+bars+'<path d="'+line+'" fill="none" stroke="#0F172A" stroke-width="1.8" stroke-linejoin="round" pointer-events="none"/>'+dots+lab+'</svg>';
+  const vit=a.slice(0,k80+1).map(function(x){return dim==='mes'?(MSL[x.k]||x.k):x.k;});
+  note.innerHTML='<b>El 80% '+(cost?'del costo':'de los paneles malos')+'</b> se concentra en <b>'+vit.length+' de '+a.length+'</b> grupos de '+escH(dname)+': '+escH(vit.slice(0,5).join(', '))+(vit.length>5?'…':'')+'. Las barras de color intenso son las prioritarias.';
+  // detalle: de cada grupo, cómo se reparte
+  let h='<table class="pr-det"><thead><tr><th>'+escH(dname)+'</th><th style="text-align:right">'+(cost?'Costo':'Unidades')+'</th><th style="text-align:right">% total</th><th style="text-align:right">Acum.</th>'+(split?'<th>Se reparte en ('+escH(PR_DIMS[split]?PR_DIMS[split][1]:DSL_NAME[split])+')</th>':'')+'</tr></thead><tbody>';
+  a.forEach(function(x){
+    const v=val(x),nm=dim==='mes'?(MSL[x.k]||x.k):x.k;
+    let rep='';
+    if(split){
+      rep='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="pr-mini">'+keys.filter(function(k){return x.p[k];}).map(function(k){return '<i style="flex:'+(cost?x.p[k].c:x.p[k].u)+';background:'+splitColor(k,keys)+'"></i>';}).join('')+'</div><span style="font-size:11px;color:#374151">'+keys.filter(function(k){return x.p[k];}).map(function(k){const q=cost?x.p[k].c:x.p[k].u;return '<b style="color:'+splitColor(k,keys)+'">'+escH(k)+'</b> '+prFmt(q,cost)+' ('+Math.round(q/v*100)+'%)';}).join(' · ')+'</span></div>';
+    }
+    h+='<tr'+(x.otros?'':' data-dim="'+dim+'" data-val="'+escH(x.k)+'"')+'><td><b>'+escH(nm)+'</b></td><td style="text-align:right">'+prFmt(v,cost)+'</td><td style="text-align:right">'+(v/tot*100).toFixed(1)+'%</td><td style="text-align:right;color:var(--muted)">'+Math.round(x.cum)+'%</td>'+(split?'<td>'+rep+'</td>':'')+'</tr>';
+  });
+  det.innerHTML=h+'</tbody></table>';
 }
 function drawPanMes(){
   const el=document.getElementById('d-pan-mes');if(!el)return;
-  const v=Array(12).fill(0);PAN_ROWS.forEach(function(r){const m=(parseInt(r.mes)||1)-1;v[m]+=(+r.paneles_malos||0);});
-  if(!v.some(function(x){return x>0;})){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
-  const W=Math.max(el.clientWidth,300),H=170,l=34,r=10,t=20,b=22,band=(W-l-r)/12,bw=band*.62,mx=Math.max.apply(null,v)*1.12;
+  const split=prSplit(),rows=dslFilter(PAN_ROWS,'mes'),mm=[];
+  for(let i=0;i<12;i++)mm.push({u:0,p:{}});
+  rows.forEach(function(r){const u=+r.paneles_malos||0;if(u<=0)return;const m=(parseInt(r.mes)||1)-1;mm[m].u+=u;if(split){const sk=DSL_GET[split](r);mm[m].p[sk]=(mm[m].p[sk]||0)+u;}});
+  if(!mm.some(function(x){return x.u>0;})){el.innerHTML='<div class="empty">Sin paneles malos</div>';return;}
+  const tk={};mm.forEach(function(x){Object.keys(x.p).forEach(function(k){tk[k]=(tk[k]||0)+x.p[k];});});
+  const keys=Object.keys(tk).sort(function(a,b){return tk[b]-tk[a];});
+  const W=Math.max(el.clientWidth,300),H=175,l=34,r=10,t=20,b=22,band=(W-l-r)/12,bw=band*.62,mx=Math.max.apply(null,mm.map(function(x){return x.u;}))*1.12;
   const Y=function(x){return H-b-x/mx*(H-b-t);};
   let s2='';
   [0,.5,1].forEach(function(f){const x=mx/1.12*f;s2+='<line x1="'+l+'" y1="'+Y(x).toFixed(1)+'" x2="'+(W-r)+'" y2="'+Y(x).toFixed(1)+'" stroke="#E5E7EB"/><text x="'+(l-5)+'" y="'+(Y(x)+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="#9CA3AF">'+Math.round(x)+'</text>';});
-  v.forEach(function(x,i){const cx=l+band*i+band/2;s2+=(x>0?'<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+Y(x).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-Y(x)).toFixed(1)+'" rx="2" fill="#EF4444"><title>'+MSL[i+1]+': '+fmtN(x)+' un</title></rect><text x="'+cx.toFixed(1)+'" y="'+(Y(x)-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151">'+fmtN(x)+'</text>':'')+'<text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="#6B7280">'+MSL[i+1]+'</text>';});
-  el.innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+s2+'</svg>';
+  mm.forEach(function(x,i){
+    const cx=l+band*i+band/2;let inner='';
+    if(x.u>0){
+      if(split&&keys.length){let yy=H-b;keys.forEach(function(k){if(!x.p[k])return;const h=x.p[k]/mx*(H-b-t);yy-=h;inner+='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+splitColor(k,keys)+'"><title>'+MSL[i+1]+' · '+escH(k)+': '+fmtN(x.p[k])+' un</title></rect>';});}
+      else inner='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+Y(x.u).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(H-b-Y(x.u)).toFixed(1)+'" rx="2" style="fill:var(--accent)"><title>'+MSL[i+1]+': '+fmtN(x.u)+' un</title></rect>';
+      inner+='<text x="'+cx.toFixed(1)+'" y="'+(Y(x.u)-4).toFixed(1)+'" text-anchor="middle" font-size="10" fill="#374151" font-weight="600">'+fmtN(x.u)+'</text>';
+    }
+    s2+='<g data-dim="mes" data-val="'+(i+1)+'">'+inner+'<rect x="'+(cx-band/2).toFixed(1)+'" y="'+t+'" width="'+band.toFixed(1)+'" height="'+(H-b-t)+'" fill="transparent"/><text x="'+cx.toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="10" fill="#6B7280">'+MSL[i+1]+'</text></g>';
+  });
+  el.innerHTML=prLegend(keys)+'<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible">'+s2+'</svg>';
 }
 function drawPanelCharts(){
-  prHbars('d-pan-alt',PR_DIMS.altura[1]);prHbars('d-pan-slot',PR_DIMS.slot[1]);prHbars('d-pan-med',PR_DIMS.medida[1]);
-  drawPareto();drawPanMes();
+  prHbars('d-pan-mat','sku');prHbars('d-pan-alt','altura');prHbars('d-pan-slot','slot');prHbars('d-pan-med','medida');
+  drawPareto();drawPanMes();dslHighlight();
 }
 (function(){
   if(!window.ResizeObserver)return;
-  [['d-pareto',function(){drawPareto();}],['d-pan-mes',function(){drawPanMes();}]].forEach(function(p){
+  [['d-pareto',function(){drawPareto();dslHighlight();}],['d-pan-mes',function(){drawPanMes();dslHighlight();}]].forEach(function(p){
     const el=document.getElementById(p[0]);if(!el)return;let w=0;
     new ResizeObserver(function(){if(Math.abs(el.clientWidth-w)>2){w=el.clientWidth;if(PAN_ROWS.length)p[1]();}}).observe(el);
   });
